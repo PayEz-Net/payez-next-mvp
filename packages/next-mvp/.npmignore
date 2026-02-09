@@ -1,0 +1,9 @@
+# Exclude unnecessary files and directories from the published package
+node_modules/
+dist/
+examples/
+tsconfig.tsbuildinfo
+.DS_Store
+.eslintrc
+.prettierrc
+jest.config.js

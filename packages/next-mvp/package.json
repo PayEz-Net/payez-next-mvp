@@ -1,0 +1,855 @@
+{
+  "name": "@payez/next-mvp",
+  "version": "3.1.0",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "scripts",
+    "src"
+  ],
+  "scripts": {
+    "build": "npx tsc --project tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "dev": "next dev",
+    "dev:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/dev-local.ps1",
+    "dev:broker": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/dev-broker.ps1"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./config/logger": {
+      "types": "./dist/config/logger.d.ts",
+      "require": "./dist/config/logger.js",
+      "default": "./dist/config/logger.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "require": "./dist/client/index.js",
+      "default": "./dist/client/index.js"
+    },
+    "./client/AuthContext": {
+      "types": "./dist/client/AuthContext.d.ts",
+      "require": "./dist/client/AuthContext.js",
+      "default": "./dist/client/AuthContext.js"
+    },
+    "./types/auth": {
+      "types": "./dist/types/auth.d.ts",
+      "require": "./dist/types/auth.js",
+      "default": "./dist/types/auth.js"
+    },
+    "./auth/auth-options": {
+      "types": "./dist/auth/auth-options.d.ts",
+      "require": "./dist/auth/auth-options.js",
+      "default": "./dist/auth/auth-options.js"
+    },
+    "./components/auth/FederatedAuthSection": {
+      "types": "./dist/components/auth/FederatedAuthSection.d.ts",
+      "require": "./dist/components/auth/FederatedAuthSection.js",
+      "default": "./dist/components/auth/FederatedAuthSection.js"
+    },
+    "./components/auth/TraditionalAuthSection": {
+      "types": "./dist/components/auth/TraditionalAuthSection.d.ts",
+      "require": "./dist/components/auth/TraditionalAuthSection.js",
+      "default": "./dist/components/auth/TraditionalAuthSection.js"
+    },
+    "./components/auth/ModeAwareLoginPage": {
+      "types": "./dist/components/auth/ModeAwareLoginPage.d.ts",
+      "require": "./dist/components/auth/ModeAwareLoginPage.js",
+      "default": "./dist/components/auth/ModeAwareLoginPage.js"
+    },
+    "./components/auth/ModeAwareSignupPage": {
+      "types": "./dist/components/auth/ModeAwareSignupPage.d.ts",
+      "require": "./dist/components/auth/ModeAwareSignupPage.js",
+      "default": "./dist/components/auth/ModeAwareSignupPage.js"
+    },
+    "./theme": {
+      "types": "./dist/theme/index.d.ts",
+      "require": "./dist/theme/index.js",
+      "default": "./dist/theme/index.js"
+    },
+    "./edge": {
+      "types": "./dist/edge/middleware.d.ts",
+      "require": "./dist/edge/middleware.js",
+      "default": "./dist/edge/middleware.js"
+    },
+    "./edge/middleware": {
+      "types": "./dist/edge/middleware.d.ts",
+      "require": "./dist/edge/middleware.js",
+      "default": "./dist/edge/middleware.js"
+    },
+    "./dist": {
+      "types": "./index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./index.js"
+    },
+    "./dist/theme": {
+      "types": "./theme/index.d.ts",
+      "require": "./dist/theme/index.js",
+      "default": "./theme/index.js"
+    },
+    "./dist/edge/middleware": {
+      "types": "./edge/middleware.d.ts",
+      "require": "./dist/edge/middleware.js",
+      "default": "./edge/middleware.js"
+    },
+    "./lib/auth": {
+      "types": "./dist/lib/auth.d.ts",
+      "require": "./dist/lib/auth.js",
+      "default": "./dist/lib/auth.js"
+    },
+    "./lib/session-store": {
+      "types": "./dist/lib/session-store.d.ts",
+      "require": "./dist/lib/session-store.js",
+      "default": "./dist/lib/session-store.js"
+    },
+    "./lib/token-lifecycle": {
+      "types": "./dist/lib/token-lifecycle.d.ts",
+      "require": "./dist/lib/token-lifecycle.js",
+      "default": "./dist/lib/token-lifecycle.js"
+    },
+    "./lib/anon-session": {
+      "types": "./dist/lib/anon-session.d.ts",
+      "require": "./dist/lib/anon-session.js",
+      "default": "./dist/lib/anon-session.js"
+    },
+    "./lib/app-slug": {
+      "types": "./dist/lib/app-slug.d.ts",
+      "require": "./dist/lib/app-slug.js",
+      "default": "./dist/lib/app-slug.js"
+    },
+    "./api-handlers/anon/preferences": {
+      "types": "./dist/api-handlers/anon/preferences.d.ts",
+      "require": "./dist/api-handlers/anon/preferences.js",
+      "default": "./dist/api-handlers/anon/preferences.js"
+    },
+    "./api-handlers/admin": {
+      "types": "./dist/api-handlers/admin/index.d.ts",
+      "require": "./dist/api-handlers/admin/index.js",
+      "default": "./dist/api-handlers/admin/index.js"
+    },
+    "./lib/redis": {
+      "types": "./dist/lib/redis.d.ts",
+      "require": "./dist/lib/redis.js",
+      "default": "./dist/lib/redis.js"
+    },
+    "./lib/jwt-decode": {
+      "types": "./dist/lib/jwt-decode.d.ts",
+      "require": "./dist/lib/jwt-decode.js",
+      "default": "./dist/lib/jwt-decode.js"
+    },
+    "./lib/nextauth-secret": {
+      "types": "./dist/lib/nextauth-secret.d.ts",
+      "require": "./dist/lib/nextauth-secret.js",
+      "default": "./dist/lib/nextauth-secret.js"
+    },
+    "./lib/api-handler": {
+      "types": "./dist/lib/api-handler.d.ts",
+      "require": "./dist/lib/api-handler.js",
+      "default": "./dist/lib/api-handler.js"
+    },
+    "./lib/startup-init": {
+      "types": "./dist/lib/startup-init.d.ts",
+      "require": "./dist/lib/startup-init.js",
+      "default": "./dist/lib/startup-init.js"
+    },
+    "./lib/idp-client-config": {
+      "types": "./dist/lib/idp-client-config.d.ts",
+      "require": "./dist/lib/idp-client-config.js",
+      "default": "./dist/lib/idp-client-config.js"
+    },
+    "./hooks/useAuthSettings": {
+      "types": "./dist/hooks/useAuthSettings.d.ts",
+      "require": "./dist/hooks/useAuthSettings.js",
+      "default": "./dist/hooks/useAuthSettings.js"
+    },
+    "./hooks/useAvailableProviders": {
+      "types": "./dist/hooks/useAvailableProviders.d.ts",
+      "require": "./dist/hooks/useAvailableProviders.js",
+      "default": "./dist/hooks/useAvailableProviders.js"
+    },
+    "./hooks/usePublicAuthSettings": {
+      "types": "./dist/hooks/usePublicAuthSettings.d.ts",
+      "require": "./dist/hooks/usePublicAuthSettings.js",
+      "default": "./dist/hooks/usePublicAuthSettings.js"
+    },
+    "./routes/auth/settings": {
+      "types": "./dist/routes/auth/settings.d.ts",
+      "require": "./dist/routes/auth/settings.js",
+      "default": "./dist/routes/auth/settings.js"
+    },
+    "./lib/standardized-client-api": {
+      "types": "./dist/lib/standardized-client-api.d.ts",
+      "require": "./dist/lib/standardized-client-api.js",
+      "default": "./dist/lib/standardized-client-api.js"
+    },
+    "./lib/test-aware-get-token": {
+      "types": "./dist/lib/test-aware-get-token.d.ts",
+      "require": "./dist/lib/test-aware-get-token.js",
+      "default": "./dist/lib/test-aware-get-token.js"
+    },
+    "./lib/token-expiry": {
+      "types": "./dist/lib/token-expiry.d.ts",
+      "require": "./dist/lib/token-expiry.js",
+      "default": "./dist/lib/token-expiry.js"
+    },
+    "./lib/refresh-token-validator": {
+      "types": "./dist/lib/refresh-token-validator.d.ts",
+      "require": "./dist/lib/refresh-token-validator.js",
+      "default": "./dist/lib/refresh-token-validator.js"
+    },
+    "./dist/lib/auth": {
+      "types": "./lib/auth.d.ts",
+      "require": "./dist/lib/auth.js",
+      "default": "./lib/auth.js"
+    },
+    "./dist/lib/session-store": {
+      "types": "./lib/session-store.d.ts",
+      "require": "./dist/lib/session-store.js",
+      "default": "./lib/session-store.js"
+    },
+    "./dist/lib/redis": {
+      "types": "./lib/redis.d.ts",
+      "require": "./dist/lib/redis.js",
+      "default": "./lib/redis.js"
+    },
+    "./dist/lib/jwt-decode": {
+      "types": "./lib/jwt-decode.d.ts",
+      "require": "./dist/lib/jwt-decode.js",
+      "default": "./lib/jwt-decode.js"
+    },
+    "./dist/lib/nextauth-secret": {
+      "types": "./lib/nextauth-secret.d.ts",
+      "require": "./dist/lib/nextauth-secret.js",
+      "default": "./lib/nextauth-secret.js"
+    },
+    "./dist/lib/token-expiry": {
+      "types": "./lib/token-expiry.d.ts",
+      "require": "./dist/lib/token-expiry.js",
+      "default": "./lib/token-expiry.js"
+    },
+    "./dist/lib/refresh-token-validator": {
+      "types": "./lib/refresh-token-validator.d.ts",
+      "require": "./dist/lib/refresh-token-validator.js",
+      "default": "./lib/refresh-token-validator.js"
+    },
+    "./lib/internal-api": {
+      "types": "./dist/lib/internal-api.d.ts",
+      "require": "./dist/lib/internal-api.js",
+      "default": "./dist/lib/internal-api.js"
+    },
+    "./lib/site-logger": {
+      "types": "./dist/lib/site-logger.d.ts",
+      "require": "./dist/lib/site-logger.js",
+      "default": "./dist/lib/site-logger.js"
+    },
+    "./dist/lib/idp-fetch": {
+      "types": "./lib/idp-fetch.d.ts",
+      "require": "./dist/lib/idp-fetch.js",
+      "default": "./lib/idp-fetch.js"
+    },
+    "./dist/lib/simple-api-handler": {
+      "types": "./lib/simple-api-handler.d.ts",
+      "require": "./dist/lib/simple-api-handler.js",
+      "default": "./lib/simple-api-handler.js"
+    },
+    "./dist/lib/types/api-responses": {
+      "types": "./lib/types/api-responses.d.ts",
+      "require": "./dist/lib/types/api-responses.js",
+      "default": "./lib/types/api-responses.js"
+    },
+    "./dist/config/env": {
+      "types": "./config/env.d.ts",
+      "require": "./dist/config/env.js",
+      "default": "./config/env.js"
+    },
+    "./dist/types/auth": {
+      "types": "./types/api.d.ts",
+      "require": "./dist/types/api.js",
+      "default": "./types/api.js"
+    },
+    "./dist/models/SessionModel": {
+      "types": "./models/SessionModel.d.ts",
+      "require": "./dist/models/SessionModel.js",
+      "default": "./models/SessionModel.js"
+    },
+    "./dist/models/DecodedAccessToken": {
+      "types": "./models/DecodedAccessToken.d.ts",
+      "require": "./dist/models/DecodedAccessToken.js",
+      "default": "./models/DecodedAccessToken.js"
+    },
+    "./api-handlers/auth/status": {
+      "types": "./dist/api-handlers/auth/status.d.ts",
+      "require": "./dist/api-handlers/auth/status.js",
+      "default": "./dist/api-handlers/auth/status.js"
+    },
+    "./api-handlers/auth/jwks": {
+      "types": "./dist/api-handlers/auth/jwks.d.ts",
+      "require": "./dist/api-handlers/auth/jwks.js",
+      "default": "./dist/api-handlers/auth/jwks.js"
+    },
+    "./api-handlers/auth/validate": {
+      "types": "./dist/api-handlers/auth/validate.d.ts",
+      "require": "./dist/api-handlers/auth/validate.js",
+      "default": "./dist/api-handlers/auth/validate.js"
+    },
+    "./api-handlers/auth/login": {
+      "types": "./dist/api-handlers/auth/login.d.ts",
+      "require": "./dist/api-handlers/auth/login.js",
+      "default": "./dist/api-handlers/auth/login.js"
+    },
+    "./api-handlers/auth/refresh": {
+      "types": "./dist/api-handlers/auth/refresh.d.ts",
+      "require": "./dist/api-handlers/auth/refresh.js",
+      "default": "./dist/api-handlers/auth/refresh.js"
+    },
+    "./api-handlers/auth/signout": {
+      "types": "./dist/api-handlers/auth/signout.d.ts",
+      "require": "./dist/api-handlers/auth/signout.js",
+      "default": "./dist/api-handlers/auth/signout.js"
+    },
+    "./api-handlers/auth/update-session": {
+      "types": "./dist/api-handlers/auth/update-session.d.ts",
+      "require": "./dist/api-handlers/auth/update-session.js",
+      "default": "./dist/api-handlers/auth/update-session.js"
+    },
+    "./api-handlers/auth/verify-code": {
+      "types": "./dist/api-handlers/auth/verify-code.d.ts",
+      "require": "./dist/api-handlers/auth/verify-code.js",
+      "default": "./dist/api-handlers/auth/verify-code.js"
+    },
+    "./dist/api-handlers/auth/status": {
+      "types": "./api-handlers/auth/status.d.ts",
+      "require": "./dist/api-handlers/auth/status.js",
+      "default": "./api-handlers/auth/status.js"
+    },
+    "./dist/api-handlers/auth/jwks": {
+      "types": "./api-handlers/auth/jwks.d.ts",
+      "require": "./dist/api-handlers/auth/jwks.js",
+      "default": "./api-handlers/auth/jwks.js"
+    },
+    "./dist/api-handlers/auth/login": {
+      "types": "./api-handlers/auth/login.d.ts",
+      "require": "./dist/api-handlers/auth/login.js",
+      "default": "./api-handlers/auth/login.js"
+    },
+    "./dist/api-handlers/auth/refresh": {
+      "types": "./api-handlers/auth/refresh.d.ts",
+      "require": "./dist/api-handlers/auth/refresh.js",
+      "default": "./api-handlers/auth/refresh.js"
+    },
+    "./dist/api-handlers/auth/signout": {
+      "types": "./api-handlers/auth/signout.d.ts",
+      "require": "./dist/api-handlers/auth/signout.js",
+      "default": "./api-handlers/auth/signout.js"
+    },
+    "./dist/api-handlers/auth/update-session": {
+      "types": "./api-handlers/auth/update-session.d.ts",
+      "require": "./dist/api-handlers/auth/update-session.js",
+      "default": "./api-handlers/auth/update-session.js"
+    },
+    "./dist/api-handlers/auth/verify-code": {
+      "types": "./api-handlers/auth/verify-code.d.ts",
+      "require": "./dist/api-handlers/auth/verify-code.js",
+      "default": "./api-handlers/auth/verify-code.js"
+    },
+    "./api-handlers/account/masked-info": {
+      "types": "./dist/api-handlers/account/masked-info.d.ts",
+      "require": "./dist/api-handlers/account/masked-info.js",
+      "default": "./dist/api-handlers/account/masked-info.js"
+    },
+    "./dist/api-handlers/account/masked-info": {
+      "types": "./api-handlers/account/masked-info.d.ts",
+      "require": "./dist/api-handlers/account/masked-info.js",
+      "default": "./api-handlers/account/masked-info.js"
+    },
+    "./api-handlers/account/send-code": {
+      "types": "./dist/api-handlers/account/send-code.d.ts",
+      "require": "./dist/api-handlers/account/send-code.js",
+      "default": "./dist/api-handlers/account/send-code.js"
+    },
+    "./dist/api-handlers/account/send-code": {
+      "types": "./api-handlers/account/send-code.d.ts",
+      "require": "./dist/api-handlers/account/send-code.js",
+      "default": "./api-handlers/account/send-code.js"
+    },
+    "./api-handlers/account/verify-email": {
+      "types": "./dist/api-handlers/account/verify-email.d.ts",
+      "require": "./dist/api-handlers/account/verify-email.js",
+      "default": "./dist/api-handlers/account/verify-email.js"
+    },
+    "./dist/api-handlers/account/verify-email": {
+      "types": "./api-handlers/account/verify-email.d.ts",
+      "require": "./dist/api-handlers/account/verify-email.js",
+      "default": "./api-handlers/account/verify-email.js"
+    },
+    "./api-handlers/account/verify-sms": {
+      "types": "./dist/api-handlers/account/verify-sms.d.ts",
+      "require": "./dist/api-handlers/account/verify-sms.js",
+      "default": "./dist/api-handlers/account/verify-sms.js"
+    },
+    "./dist/api-handlers/account/verify-sms": {
+      "types": "./api-handlers/account/verify-sms.d.ts",
+      "require": "./dist/api-handlers/account/verify-sms.js",
+      "default": "./api-handlers/account/verify-sms.js"
+    },
+    "./api-handlers/account/recovery/initiate": {
+      "types": "./dist/api-handlers/account/recovery/initiate.d.ts",
+      "require": "./dist/api-handlers/account/recovery/initiate.js",
+      "default": "./dist/api-handlers/account/recovery/initiate.js"
+    },
+    "./api-handlers/account/recovery/send-code": {
+      "types": "./dist/api-handlers/account/recovery/send-code.d.ts",
+      "require": "./dist/api-handlers/account/recovery/send-code.js",
+      "default": "./dist/api-handlers/account/recovery/send-code.js"
+    },
+    "./api-handlers/account/recovery/verify-code": {
+      "types": "./dist/api-handlers/account/recovery/verify-code.d.ts",
+      "require": "./dist/api-handlers/account/recovery/verify-code.js",
+      "default": "./dist/api-handlers/account/recovery/verify-code.js"
+    },
+    "./api-handlers/account/reset-password": {
+      "types": "./dist/api-handlers/account/reset-password.d.ts",
+      "require": "./dist/api-handlers/account/reset-password.js",
+      "default": "./dist/api-handlers/account/reset-password.js"
+    },
+    "./api-handlers/account/change-password": {
+      "types": "./dist/api-handlers/account/change-password.d.ts",
+      "require": "./dist/api-handlers/account/change-password.js",
+      "default": "./dist/api-handlers/account/change-password.js"
+    },
+    "./api-handlers/account/validate-password": {
+      "types": "./dist/api-handlers/account/validate-password.d.ts",
+      "require": "./dist/api-handlers/account/validate-password.js",
+      "default": "./dist/api-handlers/account/validate-password.js"
+    },
+    "./api-handlers/account/profile": {
+      "types": "./dist/api-handlers/account/profile.d.ts",
+      "require": "./dist/api-handlers/account/profile.js",
+      "default": "./dist/api-handlers/account/profile.js"
+    },
+    "./dist/api-handlers/account/recovery/initiate": {
+      "types": "./api-handlers/account/recovery/initiate.d.ts",
+      "require": "./dist/api-handlers/account/recovery/initiate.js",
+      "default": "./api-handlers/account/recovery/initiate.js"
+    },
+    "./dist/api-handlers/account/recovery/send-code": {
+      "types": "./api-handlers/account/recovery/send-code.d.ts",
+      "require": "./dist/api-handlers/account/recovery/send-code.js",
+      "default": "./api-handlers/account/recovery/send-code.js"
+    },
+    "./dist/api-handlers/account/recovery/verify-code": {
+      "types": "./api-handlers/account/recovery/verify-code.d.ts",
+      "require": "./dist/api-handlers/account/recovery/verify-code.js",
+      "default": "./api-handlers/account/recovery/verify-code.js"
+    },
+    "./dist/api-handlers/account/reset-password": {
+      "types": "./api-handlers/account/reset-password.d.ts",
+      "require": "./dist/api-handlers/account/reset-password.js",
+      "default": "./api-handlers/account/reset-password.js"
+    },
+    "./dist/api-handlers/account/change-password": {
+      "types": "./api-handlers/account/change-password.d.ts",
+      "require": "./dist/api-handlers/account/change-password.js",
+      "default": "./api-handlers/account/change-password.js"
+    },
+    "./dist/api-handlers/account/validate-password": {
+      "types": "./api-handlers/account/validate-password.d.ts",
+      "require": "./dist/api-handlers/account/validate-password.js",
+      "default": "./api-handlers/account/validate-password.js"
+    },
+    "./dist/api-handlers/account/profile": {
+      "types": "./api-handlers/account/profile.d.ts",
+      "require": "./dist/api-handlers/account/profile.js",
+      "default": "./api-handlers/account/profile.js"
+    },
+    "./dist/api-handlers/auth/validate": {
+      "types": "./api-handlers/auth/validate.d.ts",
+      "require": "./dist/api-handlers/auth/validate.js",
+      "default": "./api-handlers/auth/validate.js"
+    },
+    "./api-handlers/session/refresh-viability": {
+      "types": "./dist/api-handlers/session/refresh-viability.d.ts",
+      "require": "./dist/api-handlers/session/refresh-viability.js",
+      "default": "./dist/api-handlers/session/refresh-viability.js"
+    },
+    "./api-handlers/session/viability": {
+      "types": "./dist/api-handlers/session/viability.d.ts",
+      "require": "./dist/api-handlers/session/viability.js",
+      "default": "./dist/api-handlers/session/viability.js"
+    },
+    "./dist/api-handlers/session/refresh-viability": {
+      "types": "./api-handlers/session/refresh-viability.d.ts",
+      "require": "./dist/api-handlers/session/refresh-viability.js",
+      "default": "./api-handlers/session/refresh-viability.js"
+    },
+    "./dist/api-handlers/session/viability": {
+      "types": "./api-handlers/session/viability.d.ts",
+      "require": "./dist/api-handlers/session/viability.js",
+      "default": "./api-handlers/session/viability.js"
+    },
+    "./dist/client/fetchWithSession": {
+      "types": "./client/fetchWithSession.d.ts",
+      "require": "./dist/client/fetchWithSession.js",
+      "default": "./client/fetchWithSession.js"
+    },
+    "./utils/api": {
+      "types": "./dist/utils/api.d.ts",
+      "require": "./dist/utils/api.js",
+      "default": "./dist/utils/api.js"
+    },
+    "./utils/logout": {
+      "types": "./dist/utils/logout.d.ts",
+      "require": "./dist/utils/logout.js",
+      "default": "./dist/utils/logout.js"
+    },
+    "./dist/utils/api": {
+      "types": "./utils/api.d.ts",
+      "require": "./dist/utils/api.js",
+      "default": "./utils/api.js"
+    },
+    "./dist/utils/logout": {
+      "types": "./utils/logout.d.ts",
+      "require": "./dist/utils/logout.js",
+      "default": "./utils/logout.js"
+    },
+    "./dist/hooks/useAuth": {
+      "types": "./hooks/useAuth.d.ts",
+      "require": "./dist/hooks/useAuth.js",
+      "default": "./hooks/useAuth.js"
+    },
+    "./dist/hooks/useProfile": {
+      "types": "./hooks/useProfile.d.ts",
+      "require": "./dist/hooks/useProfile.js",
+      "default": "./hooks/useProfile.js"
+    },
+    "./dist/pages/profile": {
+      "types": "./dist/pages/profile/page.d.ts",
+      "require": "./dist/pages/profile/page.js",
+      "default": "./dist/pages/profile/page.js"
+    },
+    "./dist/pages/login": {
+      "types": "./dist/pages/login/page.d.ts",
+      "require": "./dist/pages/login/page.js",
+      "default": "./dist/pages/login/page.js"
+    },
+    "./dist/pages/recovery": {
+      "types": "./dist/pages/recovery/page.d.ts",
+      "require": "./dist/pages/recovery/page.js",
+      "default": "./dist/pages/recovery/page.js"
+    },
+    "./dist/pages/verify-code": {
+      "types": "./dist/pages/verify-code/page.d.ts",
+      "require": "./dist/pages/verify-code/page.js",
+      "default": "./dist/pages/verify-code/page.js"
+    },
+    "./pages/admin-login": {
+      "types": "./dist/pages/admin-login/page.d.ts",
+      "require": "./dist/pages/admin-login/page.js",
+      "default": "./dist/pages/admin-login/page.js"
+    },
+    "./dist/utils/error-message": {
+      "types": "./utils/error-message.d.ts",
+      "require": "./dist/utils/error-message.js",
+      "default": "./utils/error-message.js"
+    },
+    "./dist/lib/standardized-client-api": {
+      "types": "./lib/standardized-client-api.d.ts",
+      "require": "./dist/lib/standardized-client-api.js",
+      "default": "./lib/standardized-client-api.js"
+    },
+    "./dist/components/SessionSync": {
+      "types": "./components/SessionSync.d.ts",
+      "require": "./dist/components/SessionSync.js",
+      "default": "./components/SessionSync.js"
+    },
+    "./dist/components/SignalRHealthCheck": {
+      "types": "./components/SignalRHealthCheck.d.ts",
+      "require": "./dist/components/SignalRHealthCheck.js",
+      "default": "./components/SignalRHealthCheck.js"
+    },
+    "./dist/services/signalrActivityService": {
+      "types": "./services/signalrActivityService.d.ts",
+      "require": "./dist/services/signalrActivityService.js",
+      "default": "./services/signalrActivityService.js"
+    },
+    "./dist/stores/authStore": {
+      "types": "./stores/authStore.d.ts",
+      "require": "./dist/stores/authStore.js",
+      "default": "./stores/authStore.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "require": "./dist/api/index.js",
+      "default": "./dist/api/index.js"
+    },
+    "./api/auth-handler": {
+      "types": "./dist/api/auth-handler.d.ts",
+      "require": "./dist/api/auth-handler.js",
+      "default": "./dist/api/auth-handler.js"
+    },
+    "./routes/auth/refresh": {
+      "types": "./dist/routes/auth/refresh.d.ts",
+      "require": "./dist/routes/auth/refresh.js",
+      "default": "./dist/routes/auth/refresh.js"
+    },
+    "./routes/auth/session": {
+      "types": "./dist/routes/auth/session.d.ts",
+      "require": "./dist/routes/auth/session.js",
+      "default": "./dist/routes/auth/session.js"
+    },
+    "./pages/test-env": {
+      "types": "./dist/pages/test-env/index.d.ts",
+      "require": "./dist/pages/test-env/index.js",
+      "default": "./dist/pages/test-env/index.js"
+    },
+    "./pages/showcase": {
+      "types": "./dist/pages/showcase/index.d.ts",
+      "require": "./dist/pages/showcase/index.js",
+      "default": "./dist/pages/showcase/index.js"
+    },
+    "./routes/auth/logout": {
+      "types": "./dist/routes/auth/logout.d.ts",
+      "require": "./dist/routes/auth/logout.js",
+      "default": "./dist/routes/auth/logout.js"
+    },
+    "./routes/auth/viability": {
+      "types": "./dist/routes/auth/viability.d.ts",
+      "require": "./dist/routes/auth/viability.js",
+      "default": "./dist/routes/auth/viability.js"
+    },
+    "./routes/session/refresh-viability": {
+      "types": "./dist/routes/session/refresh-viability.d.ts",
+      "require": "./dist/routes/session/refresh-viability.js",
+      "default": "./dist/routes/session/refresh-viability.js"
+    },
+    "./routes/session": {
+      "types": "./dist/routes/session/index.d.ts",
+      "require": "./dist/routes/session/index.js",
+      "default": "./dist/routes/session/index.js"
+    },
+    "./routes/auth/nextauth": {
+      "types": "./dist/routes/auth/nextauth.d.ts",
+      "require": "./dist/routes/auth/nextauth.js",
+      "default": "./dist/routes/auth/nextauth.js"
+    },
+    "./routes/auth": {
+      "types": "./dist/routes/auth/index.d.ts",
+      "require": "./dist/routes/auth/index.js",
+      "default": "./dist/routes/auth/index.js"
+    },
+    "./routes": {
+      "types": "./dist/routes/index.d.ts",
+      "require": "./dist/routes/index.js",
+      "default": "./dist/routes/index.js"
+    },
+    "./routes/account/masked-info": {
+      "types": "./dist/routes/account/masked-info.d.ts",
+      "require": "./dist/routes/account/masked-info.js",
+      "default": "./dist/routes/account/masked-info.js"
+    },
+    "./routes/account/send-code": {
+      "types": "./dist/routes/account/send-code.d.ts",
+      "require": "./dist/routes/account/send-code.js",
+      "default": "./dist/routes/account/send-code.js"
+    },
+    "./routes/account/verify-email": {
+      "types": "./dist/routes/account/verify-email.d.ts",
+      "require": "./dist/routes/account/verify-email.js",
+      "default": "./dist/routes/account/verify-email.js"
+    },
+    "./routes/account/verify-sms": {
+      "types": "./dist/routes/account/verify-sms.d.ts",
+      "require": "./dist/routes/account/verify-sms.js",
+      "default": "./dist/routes/account/verify-sms.js"
+    },
+    "./routes/account/update-phone": {
+      "types": "./dist/routes/account/update-phone.d.ts",
+      "require": "./dist/routes/account/update-phone.js",
+      "default": "./dist/routes/account/update-phone.js"
+    },
+    "./routes/account": {
+      "types": "./dist/routes/account/index.d.ts",
+      "require": "./dist/routes/account/index.js",
+      "default": "./dist/routes/account/index.js"
+    },
+    "./components/account": {
+      "types": "./dist/components/account/index.d.ts",
+      "require": "./dist/components/account/index.js",
+      "default": "./dist/components/account/index.js"
+    },
+    "./components/account/UserAvatarMenu": {
+      "types": "./dist/components/account/UserAvatarMenu.d.ts",
+      "require": "./dist/components/account/UserAvatarMenu.js",
+      "default": "./dist/components/account/UserAvatarMenu.js"
+    },
+    "./pages/security": {
+      "import": "./dist/pages/security/index.js",
+      "require": "./dist/pages/security/index.js",
+      "types": "./dist/pages/security/index.d.ts"
+    },
+    "./dist/pages/security": {
+      "types": "./dist/pages/security/page.d.ts",
+      "require": "./dist/pages/security/page.js",
+      "default": "./dist/pages/security/page.js"
+    },
+    "./hooks/usePasswordValidation": {
+      "types": "./dist/hooks/usePasswordValidation.d.ts",
+      "require": "./dist/hooks/usePasswordValidation.js",
+      "default": "./dist/hooks/usePasswordValidation.js"
+    },
+    "./dist/hooks/usePasswordValidation": {
+      "types": "./dist/hooks/usePasswordValidation.d.ts",
+      "require": "./dist/hooks/usePasswordValidation.js",
+      "default": "./dist/hooks/usePasswordValidation.js"
+    },
+    "./hooks/useViabilitySession": {
+      "types": "./dist/hooks/useViabilitySession.d.ts",
+      "require": "./dist/hooks/useViabilitySession.js",
+      "default": "./dist/hooks/useViabilitySession.js"
+    },
+    "./dist/hooks/useViabilitySession": {
+      "types": "./dist/hooks/useViabilitySession.d.ts",
+      "require": "./dist/hooks/useViabilitySession.js",
+      "default": "./dist/hooks/useViabilitySession.js"
+    },
+    "./vibe": {
+      "types": "./dist/vibe/index.d.ts",
+      "require": "./dist/vibe/index.js",
+      "default": "./dist/vibe/index.js"
+    },
+    "./vibe/hooks": {
+      "types": "./dist/vibe/hooks/index.d.ts",
+      "require": "./dist/vibe/hooks/index.js",
+      "default": "./dist/vibe/hooks/index.js"
+    },
+    "./vibe/client": {
+      "types": "./dist/vibe/client.d.ts",
+      "require": "./dist/vibe/client.js",
+      "default": "./dist/vibe/client.js"
+    },
+    "./vibe/types": {
+      "types": "./dist/vibe/types.d.ts",
+      "require": "./dist/vibe/types.js",
+      "default": "./dist/vibe/types.js"
+    },
+    "./vibe/errors": {
+      "types": "./dist/vibe/errors.d.ts",
+      "require": "./dist/vibe/errors.js",
+      "default": "./dist/vibe/errors.js"
+    },
+    "./vibe/sessions": {
+      "types": "./dist/vibe/sessions.d.ts",
+      "require": "./dist/vibe/sessions.js",
+      "default": "./dist/vibe/sessions.js"
+    },
+    "./lib/geolocation": {
+      "types": "./dist/lib/geolocation.d.ts",
+      "require": "./dist/lib/geolocation.js",
+      "default": "./dist/lib/geolocation.js"
+    },
+    "./lib/user-agent-parser": {
+      "types": "./dist/lib/user-agent-parser.d.ts",
+      "require": "./dist/lib/user-agent-parser.js",
+      "default": "./dist/lib/user-agent-parser.js"
+    },
+    "./components/admin": {
+      "types": "./dist/components/admin/index.d.ts",
+      "require": "./dist/components/admin/index.js",
+      "default": "./dist/components/admin/index.js"
+    },
+    "./components/ui/BetaBadge": {
+      "types": "./dist/components/ui/BetaBadge.d.ts",
+      "require": "./dist/components/ui/BetaBadge.js",
+      "default": "./dist/components/ui/BetaBadge.js"
+    },
+    "./components/ui/Footer": {
+      "types": "./dist/components/ui/Footer.d.ts",
+      "require": "./dist/components/ui/Footer.js",
+      "default": "./dist/components/ui/Footer.js"
+    },
+    "./pages/profile": {
+      "types": "./dist/pages/profile/index.d.ts",
+      "require": "./dist/pages/profile/index.js",
+      "default": "./dist/pages/profile/index.js"
+    },
+    "./pages/profile/enhanced": {
+      "types": "./dist/pages/profile/EnhancedProfilePage.d.ts",
+      "require": "./dist/pages/profile/EnhancedProfilePage.js",
+      "default": "./dist/pages/profile/EnhancedProfilePage.js"
+    },
+    "./pages/security/enhanced": {
+      "import": "./dist/pages/security/EnhancedSecurityPage.js",
+      "require": "./dist/pages/security/EnhancedSecurityPage.js",
+      "types": "./dist/pages/security/EnhancedSecurityPage.d.ts"
+    },
+    "./pages/settings": {
+      "import": "./dist/pages/settings/index.js",
+      "require": "./dist/pages/settings/index.js",
+      "types": "./dist/pages/settings/index.d.ts"
+    },
+    "./pages/settings/enhanced": {
+      "import": "./dist/pages/settings/EnhancedSettingsPage.js",
+      "require": "./dist/pages/settings/EnhancedSettingsPage.js",
+      "types": "./dist/pages/settings/EnhancedSettingsPage.d.ts"
+    },
+    "./pages/roles": {
+      "import": "./dist/pages/roles/index.js",
+      "require": "./dist/pages/roles/index.js",
+      "types": "./dist/pages/roles/index.d.ts"
+    },
+    "./pages/admin-roles": {
+      "import": "./dist/pages/admin-roles/index.js",
+      "require": "./dist/pages/admin-roles/index.js",
+      "types": "./dist/pages/admin-roles/index.d.ts"
+    },
+    "./api-handlers/test/force-expire": {
+      "types": "./dist/api-handlers/test/force-expire.d.ts",
+      "require": "./dist/api-handlers/test/force-expire.js",
+      "default": "./dist/api-handlers/test/force-expire.js"
+    },
+    "./pages/client-admin": {
+      "types": "./dist/pages/client-admin/index.d.ts",
+      "require": "./dist/pages/client-admin/index.js",
+      "default": "./dist/pages/client-admin/index.js"
+    }
+  },
+  "peerDependencies": {
+    "@microsoft/signalr": ">=7 <10",
+    "@tanstack/react-query": "^5.90.5",
+    "lucide-react": ">=0.400.0",
+    "next": "^14.0.0 || ^15.0.0 || ^16.0.0",
+    "next-auth": "^4.24.7",
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0",
+    "winston": "^3.0.0",
+    "zustand": "^4.0.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.0.1",
+    "@azure/keyvault-secrets": "^4.7.0",
+    "@upstash/redis": "^1.35.6",
+    "ioredis": "^5.3.2",
+    "jose": "^5.2.4",
+    "jsonwebtoken": "^9.0.2",
+    "jwk-to-pem": "^2.0.5",
+    "jwt-decode": "^4.0.0",
+    "lodash": "^4.17.21",
+    "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/jwk-to-pem": "^2.0.3",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.0.0",
+    "next": "^16.1.5",
+    "next-auth": "^4.24.13",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.4.5",
+    "zustand": "^4.5.5"
+  }
+}

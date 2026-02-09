@@ -1,0 +1,145 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import { resolveNextAuthSecret } from '../../lib/nextauth-secret';
+import { getSession } from '../../lib/session-store';
+import { getJwtCookieName } from '../../lib/app-slug';
+
+interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+import { nanoid } from 'nanoid';
+
+// ...
+
+export async function POST(req: NextRequest) {
+  const requestId = nanoid();
+  try {
+    // Get session token from NextAuth JWT
+    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, cookieName: getJwtCookieName() });
+    const sessionToken = (token?.sessionToken || token?.redisSessionId) as string | undefined;
+    if (!token || typeof sessionToken !== 'string') {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+    const sessionData = await getSession(sessionToken);
+    // NOTE: Field is idpAccessToken (not accessToken) per normalized naming convention
+    if (!sessionData?.idpAccessToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Authentication required - no access token available',
+          error_code: 'UNAUTHORIZED',
+          request_id: requestId,
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { current_password, new_password, confirm_password } = body as ChangePasswordRequest;
+
+    // Validate input
+    if (!current_password || !new_password || !confirm_password) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Current password, new password, and confirmation are required',
+          error_code: 'VALIDATION_ERROR',
+          request_id: requestId,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (new_password !== confirm_password) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'New password and confirmation do not match',
+          error_code: 'VALIDATION_ERROR',
+          request_id: requestId,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Get IDP base URL from environment
+    const idpBaseUrl = process.env.IDP_URL;
+
+    if (!idpBaseUrl) {
+      console.error('[CHANGE_PASSWORD] IDP_URL not configured');
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Service configuration error',
+          error_code: 'CONFIGURATION_ERROR',
+          request_id: requestId,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Proxy request to IDP
+    const idpUrl = `${idpBaseUrl}/api/Account/change-password`;
+    const idpResponse = await fetch(idpUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionData.idpAccessToken}`,
+        'x-request-id': requestId,
+      },
+      body: JSON.stringify({
+        current_password,
+        new_password,
+        confirm_password,
+      }),
+    });
+
+    const responseData = await idpResponse.json().catch(() => ({}));
+
+    if (!idpResponse.ok) {
+      // Extract error message from IDP response
+      let errorMessage = 'Failed to change password';
+
+      if (responseData.message) {
+        errorMessage = responseData.message;
+      } else if (responseData.details?.value && Array.isArray(responseData.details.value) && responseData.details.value.length > 0) {
+        errorMessage = responseData.details.value[0].message || errorMessage;
+      } else if (responseData.details?.message) {
+        errorMessage = responseData.details.message;
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: errorMessage,
+          error_code: responseData.error_code || 'CHANGE_PASSWORD_FAILED',
+          request_id: requestId,
+          details: responseData.details,
+        },
+        { status: idpResponse.status }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: responseData.message || 'Password changed successfully',
+      request_id: requestId,
+    });
+  } catch (error) {
+    console.error('[CHANGE_PASSWORD] Error:', error);
+    const requestId = req.headers.get('x-request-id') ?? crypto.randomUUID();
+    return NextResponse.json(
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to change password',
+        error_code: 'INTERNAL_ERROR',
+        request_id: requestId,
+      },
+      { status: 500 }
+    );
+  }
+}

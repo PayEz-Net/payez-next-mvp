@@ -1,0 +1,45 @@
+-- Table: core_identity.idp_client_brand_settings
+
+-- DROP TABLE IF EXISTS core_identity.idp_client_brand_settings;
+
+CREATE TABLE IF NOT EXISTS core_identity.idp_client_brand_settings
+(
+    idp_client_brand_settings_id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
+    idp_client_id integer NOT NULL,
+    theme character varying(32) COLLATE pg_catalog."default",
+    primary_color character varying(16) COLLATE pg_catalog."default",
+    secondary_color character varying(16) COLLATE pg_catalog."default",
+    logo_url text COLLATE pg_catalog."default",
+    favicon_url text COLLATE pg_catalog."default",
+    background_image_url text COLLATE pg_catalog."default",
+    custom_css text COLLATE pg_catalog."default",
+    custom_js text COLLATE pg_catalog."default",
+    password_min_length integer NOT NULL DEFAULT 8,
+    password_require_uppercase boolean NOT NULL DEFAULT true,
+    password_require_lowercase boolean NOT NULL DEFAULT true,
+    password_require_digit boolean NOT NULL DEFAULT true,
+    password_require_special boolean NOT NULL DEFAULT true,
+    password_history_count integer NOT NULL DEFAULT 5,
+    password_expiry_days integer,
+    password_strength_score integer,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    nextauth_instance_id character varying(128) COLLATE pg_catalog."default",
+    nextauth_instance_key character varying(128) COLLATE pg_catalog."default",
+    CONSTRAINT pk_idp_client_brand_settings PRIMARY KEY (idp_client_brand_settings_id),
+    CONSTRAINT uk_idp_client_brand_settings_client_id UNIQUE (idp_client_id)
+)
+
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS core_identity.idp_client_brand_settings
+    OWNER to payezidpdbadmin;
+
+REVOKE ALL ON TABLE core_identity.idp_client_brand_settings FROM backup_user;
+REVOKE ALL ON TABLE core_identity.idp_client_brand_settings FROM idp_api_user;
+
+GRANT SELECT ON TABLE core_identity.idp_client_brand_settings TO backup_user;
+
+GRANT SELECT, INSERT, DELETE, UPDATE ON TABLE core_identity.idp_client_brand_settings TO idp_api_user;
+
+GRANT ALL ON TABLE core_identity.idp_client_brand_settings TO payezidpdbadmin;

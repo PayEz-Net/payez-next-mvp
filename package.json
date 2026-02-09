@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "next-auth": "^4.24.13"
+  }
+}

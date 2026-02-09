@@ -1,0 +1,12 @@
+export { fetchWithAuth } from './client/fetch-with-auth';
+export { useAnonSession } from './client/useAnonSession';
+export type { AnonPreferences, AnonMetrics, AnonSession, UseAnonSessionReturn } from './client/useAnonSession';
+export { AuthProvider, useAuthConfig, useAuthMode, useFederatedProviders, useFederatedAuthEnabled, useTraditionalAuthEnabled } from './client/AuthContext';
+export type { AuthConfig } from './types/auth';
+export { makeAuthDecision } from './auth/auth-decision';
+export { isUnauthenticatedRoute, configurePublicRoutes, getRouteConfig } from './auth/route-config';
+export { createMvpMiddleware } from './middleware/create-middleware';
+export { UserAvatarMenu } from './components/account';
+export type { UserAvatarMenuProps } from './components/account';
+export { ErrorMetricsCard, HealthMetricsCard, AuditLogViewer, AdminAnalyticsLayout, useErrorMetrics, useHealthMetrics, useAuditLog, useAdminAnalytics, getErrorMetrics, getHealthMetrics, writeAuditLog, queryAuditLog, } from './logging';
+export type { ErrorMetrics, HealthMetrics, AuditLogEntry, AuditLogQuery, AuditLogResponse, TimeRange, RouteError, LevelCount, CategoryCount, ErrorDetail, EndpointHealth, SlowRequest, } from './logging';
