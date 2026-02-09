@@ -120,7 +120,8 @@ async function getIDPClientConfig(forceRefresh = false) {
             }
             // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from cached config
             // AUTH_TRUST_HOST=true tells NextAuth to derive OAuth callback URLs from headers.
-            if (redisConfig.baseClientUrl) {
+            // Only set if not already defined (allows deployment override for beta/staging)
+            if (redisConfig.baseClientUrl && !process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL) {
                 process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL = redisConfig.baseClientUrl;
             }
             return redisConfig;
@@ -152,7 +153,8 @@ async function getIDPClientConfig(forceRefresh = false) {
         }
         // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from config
         // AUTH_TRUST_HOST=true tells NextAuth to derive OAuth callback URLs from headers.
-        if (config.baseClientUrl) {
+        // Only set if not already defined (allows deployment override for beta/staging)
+        if (config.baseClientUrl && !process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL) {
             process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL = config.baseClientUrl;
             console.log("[IDP_CONFIG] Set IDENTITY_CLIENT_BASE_EXTERNAL_URL:", config.baseClientUrl);
         }
