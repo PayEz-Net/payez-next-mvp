@@ -13,7 +13,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.clearRBACCache = clearRBACCache;
 exports.checkPagePermission = checkPagePermission;
 exports.isRBACEnabled = isRBACEnabled;
-const crypto_1 = require("crypto");
+// ============================================================================
+// WEB CRYPTO HELPERS (Edge Runtime compatible)
+// ============================================================================
+const encoder = new TextEncoder();
+async function sha256Hex(input) {
+    const data = encoder.encode(input);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+async function hmacSha256Base64(key, message) {
+    const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message));
+    return btoa(String.fromCharCode(...new Uint8Array(signature)));
+}
+function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
 // ============================================================================
 // CACHE
 // ============================================================================
@@ -25,10 +48,11 @@ const MAX_CACHE_SIZE = 1000;
  * Generate cache key for RBAC result.
  * Uses SHA-256 hash to avoid key collisions and limit key size.
  */
-function getCacheKey(clientId, path, roles) {
+async function getCacheKey(clientId, path, roles) {
     const sortedRoles = [...roles].sort().join(',');
     const input = JSON.stringify({ clientId, path, roles: sortedRoles });
-    return (0, crypto_1.createHash)('sha256').update(input).digest('hex').substring(0, 32);
+    const hash = await sha256Hex(input);
+    return hash.substring(0, 32);
 }
 /**
  * Get cached RBAC result if valid.
@@ -74,7 +98,7 @@ function clearRBACCache() {
  * Generate HMAC-SHA256 signature for Vibe API request.
  * SECURITY: Signing key is required in production.
  */
-function generateSignature(path, clientId, timestamp) {
+async function generateSignature(path, clientId, timestamp) {
     const signingKey = process.env.VIBE_SIGNING_KEY;
     // SECURITY: Require signing key in production
     if (!signingKey) {
@@ -84,9 +108,8 @@ function generateSignature(path, clientId, timestamp) {
         return ''; // Signature optional in dev only
     }
     const stringToSign = `${timestamp}|GET|/api/v1/rbac/check|${path}|${clientId}`;
-    return (0, crypto_1.createHmac)('sha256', Buffer.from(signingKey, 'base64'))
-        .update(stringToSign)
-        .digest('base64');
+    const keyBuffer = base64ToArrayBuffer(signingKey);
+    return hmacSha256Base64(keyBuffer, stringToSign);
 }
 // ============================================================================
 // RBAC CHECK
@@ -104,7 +127,7 @@ function generateSignature(path, clientId, timestamp) {
  */
 async function checkPagePermission(path, userRoles, clientId, userClaims) {
     // Check cache first
-    const cacheKey = getCacheKey(clientId, path, userRoles);
+    const cacheKey = await getCacheKey(clientId, path, userRoles);
     const cached = getCachedResult(cacheKey);
     if (cached) {
         return cached;
@@ -131,7 +154,7 @@ async function checkPagePermission(path, userRoles, clientId, userClaims) {
     }
     // Generate signature
     const timestamp = Math.floor(Date.now() / 1000);
-    const signature = generateSignature(path, clientId, timestamp);
+    const signature = await generateSignature(path, clientId, timestamp);
     // Build headers
     const headers = {
         'Accept': 'application/json',
