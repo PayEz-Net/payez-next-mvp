@@ -359,10 +359,16 @@ async function executeDecision(request, decision, pathname, sessionPointer, sess
             return handleRefresh(request, safeCallback, opts);
     }
 }
+/** Paths that must never be RBAC-checked (they are RBAC redirect targets) */
+const RBAC_EXEMPT_PATHS = ['/error', '/unauthorized', '/service-unavailable'];
 /** Handle 'allow' decision - run RBAC if enabled */
 async function handleAllow(request, pathname, sessionPointer, sessionStatus) {
     const isPublic = (0, route_config_1.isUnauthenticatedRoute)(pathname);
     if ((0, rbac_check_1.isRBACEnabled)() && !isPublic) {
+        // Skip RBAC for error/fallback pages to prevent redirect loops
+        if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p))) {
+            return server_1.NextResponse.next();
+        }
         if (!sessionPointer.clientId) {
             console.error('[MIDDLEWARE] RBAC: No clientId');
             return server_1.NextResponse.redirect(new URL('/error?code=no_client_id', request.url));
@@ -371,6 +377,11 @@ async function handleAllow(request, pathname, sessionPointer, sessionStatus) {
             const result = await (0, rbac_check_1.checkPagePermission)(pathname, sessionPointer.roles, sessionPointer.clientId);
             if (!result.allowed) {
                 console.log('[MIDDLEWARE] RBAC denied:', { pathname, reason: result.reason });
+                // In development, fail open - RBAC API may not be fully configured
+                if (process.env.NODE_ENV !== 'production') {
+                    console.warn('[MIDDLEWARE] RBAC: Allowing in development despite denial:', result.reason);
+                    return server_1.NextResponse.next();
+                }
                 return server_1.NextResponse.redirect(new URL(result.redirect || '/unauthorized', request.url));
             }
             if (result.requires_2fa && !sessionStatus.twoFactorComplete) {
@@ -379,6 +390,11 @@ async function handleAllow(request, pathname, sessionPointer, sessionStatus) {
         }
         catch (error) {
             console.error('[MIDDLEWARE] RBAC error:', error);
+            // In development, fail open
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('[MIDDLEWARE] RBAC: Allowing in development despite error');
+                return server_1.NextResponse.next();
+            }
             return server_1.NextResponse.redirect(new URL('/error?code=rbac_error', request.url));
         }
     }
