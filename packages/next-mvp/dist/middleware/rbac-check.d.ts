@@ -1,11 +1,14 @@
 /**
  * Page RBAC Check Module
  *
- * Checks page-level permissions via Vibe API.
+ * Checks page-level permissions via Vibe API through the IDP Proxy.
  * Uses in-memory cache to reduce API calls.
  * Fails closed (DENY) on errors or timeout.
  *
- * @version 1.0.0
+ * All requests route through the IDP Vibe Proxy ({IDP_URL}/api/vibe/proxy)
+ * which injects proper HMAC credentials for the Vibe API.
+ *
+ * @version 2.0.0
  * @since page-rbac-2026-01
  */
 export interface RBACResult {
@@ -29,11 +32,15 @@ export declare function clearRBACCache(): void;
 /**
  * Check if user has permission to access a page.
  *
- * FAIL CLOSED: If Vibe API is unreachable or times out, access is DENIED.
+ * Routes through IDP Vibe Proxy ({IDP_URL}/api/vibe/proxy) which injects
+ * proper HMAC credentials. The Vibe RBAC endpoint requires client context
+ * that only the proxy can provide.
+ *
+ * FAIL CLOSED: If proxy is unreachable or times out, access is DENIED.
  *
  * @param path - The route path to check
  * @param userRoles - User's roles from session
- * @param clientId - Client ID for multi-tenancy
+ * @param clientId - Client slug for multi-tenancy
  * @param userClaims - Optional claims for claim-based authorization
  * @returns RBAC result with allowed/denied status
  */

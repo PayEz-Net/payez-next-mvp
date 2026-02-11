@@ -1,11 +1,14 @@
 /**
  * Page RBAC Check Module
  *
- * Checks page-level permissions via Vibe API.
+ * Checks page-level permissions via Vibe API through the IDP Proxy.
  * Uses in-memory cache to reduce API calls.
  * Fails closed (DENY) on errors or timeout.
  *
- * @version 1.0.0
+ * All requests route through the IDP Vibe Proxy ({IDP_URL}/api/vibe/proxy)
+ * which injects proper HMAC credentials for the Vibe API.
+ *
+ * @version 2.0.0
  * @since page-rbac-2026-01
  */
 
@@ -23,10 +26,10 @@ async function sha256Hex(input: string): Promise<string> {
     .join('');
 }
 
-async function hmacSha256Base64(key: ArrayBuffer, message: string): Promise<string> {
+async function hmacSha256Base64(key: Uint8Array, message: string): Promise<string> {
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    key,
+    key as BufferSource,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
@@ -35,13 +38,13 @@ async function hmacSha256Base64(key: ArrayBuffer, message: string): Promise<stri
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
+function base64ToUint8Array(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes;
 }
 
 // ============================================================================
@@ -127,45 +130,21 @@ export function clearRBACCache(): void {
 }
 
 // ============================================================================
-// SIGNATURE
-// ============================================================================
-
-/**
- * Generate HMAC-SHA256 signature for Vibe API request.
- * SECURITY: Signing key is required in production.
- */
-async function generateSignature(
-  path: string,
-  clientId: string,
-  timestamp: number
-): Promise<string> {
-  const signingKey = process.env.VIBE_SIGNING_KEY;
-
-  // SECURITY: Require signing key in production
-  if (!signingKey) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('[RBAC] VIBE_SIGNING_KEY is required in production');
-    }
-    return ''; // Signature optional in dev only
-  }
-
-  const stringToSign = `${timestamp}|GET|/api/v1/rbac/check|${path}|${clientId}`;
-  const keyBuffer = base64ToArrayBuffer(signingKey);
-  return hmacSha256Base64(keyBuffer, stringToSign);
-}
-
-// ============================================================================
-// RBAC CHECK
+// RBAC CHECK (via IDP Proxy)
 // ============================================================================
 
 /**
  * Check if user has permission to access a page.
  *
- * FAIL CLOSED: If Vibe API is unreachable or times out, access is DENIED.
+ * Routes through IDP Vibe Proxy ({IDP_URL}/api/vibe/proxy) which injects
+ * proper HMAC credentials. The Vibe RBAC endpoint requires client context
+ * that only the proxy can provide.
+ *
+ * FAIL CLOSED: If proxy is unreachable or times out, access is DENIED.
  *
  * @param path - The route path to check
  * @param userRoles - User's roles from session
- * @param clientId - Client ID for multi-tenancy
+ * @param clientId - Client slug for multi-tenancy
  * @param userClaims - Optional claims for claim-based authorization
  * @returns RBAC result with allowed/denied status
  */
@@ -182,9 +161,12 @@ export async function checkPagePermission(
     return cached;
   }
 
-  const vibeApiUrl = process.env.VIBE_API_URL;
-  if (!vibeApiUrl) {
-    console.error('[RBAC] VIBE_API_URL not configured');
+  const idpUrl = process.env.NEXT_PUBLIC_IDP_URL || process.env.IDP_URL;
+  const vibeClientId = process.env.VIBE_CLIENT_ID;
+  const hmacKey = process.env.VIBE_HMAC_KEY || process.env.IDP_SIGNING_KEY;
+
+  if (!idpUrl) {
+    console.error('[RBAC] IDP_URL not configured');
     return {
       allowed: false,
       reason: 'rbac_not_configured',
@@ -192,50 +174,66 @@ export async function checkPagePermission(
     };
   }
 
-  // Build request URL
-  const url = new URL('/api/v1/rbac/check', vibeApiUrl);
-  url.searchParams.set('path', path);
-  url.searchParams.set('roles', userRoles.join(','));
+  // Build RBAC endpoint with query params
+  // Vibe route is /v1/rbac/check (no /api/ prefix)
+  const params = new URLSearchParams();
+  params.set('path', path);
+  params.set('roles', userRoles.join(','));
 
-  // Add claims if provided
   if (userClaims && Object.keys(userClaims).length > 0) {
     const claimsParam = Object.entries(userClaims)
       .map(([type, value]) => `${type}:${value}`)
       .join(',');
-    url.searchParams.set('claims', claimsParam);
+    params.set('claims', claimsParam);
   }
 
-  // Generate signature
-  const timestamp = Math.floor(Date.now() / 1000);
-  const signature = await generateSignature(path, clientId, timestamp);
+  const rbacEndpoint = `/v1/rbac/check?${params.toString()}`;
 
-  // Build headers
+  // Build proxy request
+  const proxyUrl = `${idpUrl}/api/vibe/proxy`;
+  const timestamp = Math.floor(Date.now() / 1000);
+
   const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'X-Client-Id': clientId,
-    'X-Vibe-Client-Id': clientId,
   };
 
-  if (signature) {
+  if (vibeClientId) {
+    headers['X-Vibe-Client-Id'] = vibeClientId;
+  }
+
+  // Sign with HMAC (same format as vibe-client: timestamp|method|endpoint)
+  if (hmacKey && vibeClientId) {
+    const stringToSign = `${timestamp}|GET|${rbacEndpoint}`;
+    const keyBuffer = base64ToUint8Array(hmacKey);
+    const signature = await hmacSha256Base64(keyBuffer, stringToSign);
     headers['X-Vibe-Timestamp'] = String(timestamp);
     headers['X-Vibe-Signature'] = signature;
   }
+
+  // Proxy body format: { endpoint, method, data }
+  const proxyBody = {
+    endpoint: rbacEndpoint,
+    method: 'GET',
+    data: null,
+  };
 
   try {
     // 2 second timeout - fail closed
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
+    const response = await fetch(proxyUrl, {
+      method: 'POST',
       headers,
+      body: JSON.stringify(proxyBody),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error('[RBAC] Vibe API error:', response.status, response.statusText);
+      console.error('[RBAC] Proxy error:', response.status, response.statusText);
       return {
         allowed: false,
         reason: 'rbac_api_error',
@@ -252,7 +250,7 @@ export async function checkPagePermission(
   } catch (error: any) {
     // Fail closed on any error
     if (error.name === 'AbortError') {
-      console.error('[RBAC] Vibe API timeout (2s exceeded)');
+      console.error('[RBAC] Proxy timeout (2s exceeded)');
       return {
         allowed: false,
         reason: 'rbac_timeout',
@@ -260,7 +258,7 @@ export async function checkPagePermission(
       };
     }
 
-    console.error('[RBAC] Vibe API error:', error);
+    console.error('[RBAC] Proxy error:', error);
     return {
       allowed: false,
       reason: 'rbac_service_unavailable',
