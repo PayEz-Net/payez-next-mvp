@@ -185,7 +185,10 @@ async function checkPagePermission(path, userRoles, clientId, userClaims) {
                 redirect: '/error?code=rbac_error',
             };
         }
-        const result = await response.json();
+        const body = await response.json();
+        // Vibe API wraps responses: { success: true, data: { allowed, reason, ... } }
+        // Unwrap the .data property if present, otherwise use body directly
+        const result = body?.data ?? body;
         // Cache the result
         setCachedResult(cacheKey, result);
         return result;

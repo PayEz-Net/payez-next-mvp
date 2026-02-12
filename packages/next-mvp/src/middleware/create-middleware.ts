@@ -439,7 +439,8 @@ async function checkViability(
         'Cache-Control': 'no-store',
         'Cookie': request.headers.get('cookie') || ''
       },
-      credentials: 'include'
+      credentials: 'include',
+      signal: AbortSignal.timeout(5000),
     });
 
     if (response.ok) {
@@ -515,15 +516,21 @@ async function handleAllow(
 ): Promise<NextResponse> {
   const isPublic = isUnauthenticatedRoute(pathname);
 
-  if (isRBACEnabled() && !isPublic) {
+  if (isRBACEnabled() && !isPublic && sessionPointer.exists) {
     // Skip RBAC for error/fallback pages to prevent redirect loops
     if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p))) {
       return NextResponse.next();
     }
 
     if (!sessionPointer.clientId) {
-      console.error('[MIDDLEWARE] RBAC: No clientId');
-      return NextResponse.redirect(new URL('/error?code=no_client_id', request.url));
+      console.error('[MIDDLEWARE] RBAC: No clientId — returning 401');
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Unauthorized — missing clientId for RBAC' },
+          { status: 401 }
+        );
+      }
+      return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
 
     try {
@@ -591,7 +598,8 @@ async function handleRefresh(
         'x-session-token': request.cookies.get(getSessionCookieName())?.value ||
                            request.cookies.get(getSecureSessionCookieName())?.value || ''
       },
-      credentials: 'include'
+      credentials: 'include',
+      signal: AbortSignal.timeout(5000),
     });
 
     if (response.ok) {

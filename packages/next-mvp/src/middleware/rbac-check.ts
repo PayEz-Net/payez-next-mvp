@@ -241,7 +241,11 @@ export async function checkPagePermission(
       };
     }
 
-    const result: RBACResult = await response.json();
+    const body = await response.json();
+
+    // Vibe API wraps responses: { success: true, data: { allowed, reason, ... } }
+    // Unwrap the .data property if present, otherwise use body directly
+    const result: RBACResult = body?.data ?? body;
 
     // Cache the result
     setCachedResult(cacheKey, result);
