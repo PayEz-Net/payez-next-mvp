@@ -282,7 +282,7 @@ async function fetchConfigFromIDP(idpUrl, clientIdStr) {
         }
         // Map response to our interface (IDP always returns snake_case)
         const config = {
-            clientId: typeof rawClientId === 'string' ? parseInt(rawClientId, 10) : rawClientId,
+            clientId: String(rawClientId),
             clientSlug: configData.clientSlug ?? configData.client_slug ?? configData.slug ?? '',
             nextAuthSecret: configData.nextAuthSecret ?? configData.next_auth_secret ?? '',
             configCacheTtlSeconds: configData.configCacheTtlSeconds ?? configData.config_cache_ttl_seconds ?? 300,
@@ -330,7 +330,7 @@ async function fetchConfigFromIDP(idpUrl, clientIdStr) {
         console.log(`[IDP_CONFIG] Parsed baseClientUrl:`, config.baseClientUrl, `| raw keys:`, Object.keys(configData).filter(k => k.toLowerCase().includes('client')));
         // Validate we got what we need
         if (!config.clientId) {
-            throw new Error('[IDP_CONFIG] FATAL: clientId is 0 or missing after parsing');
+            throw new Error('[IDP_CONFIG] FATAL: clientId is empty or missing after parsing');
         }
         if (!config.nextAuthSecret) {
             throw new Error('[IDP_CONFIG] FATAL: nextAuthSecret is empty after parsing');

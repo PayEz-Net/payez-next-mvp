@@ -32,10 +32,6 @@ export async function resolveNextAuthSecret(): Promise<string> {
   const clientIdStr = process.env.CLIENT_ID;
   if (!clientIdStr || clientIdStr.trim() === '') throw new Error('CLIENT_ID is required (e.g., "ideal_resume_website")');
 
-  // Determine if clientId is numeric or string
-  const isNumeric = /^[0-9]+$/.test(clientIdStr);
-  const clientId = isNumeric ? parseInt(clientIdStr, 10) : clientIdStr;
-
   // Step 1: Request IDP to sign a client assertion (IDP has the keys, not us)
 
   const signingUrl = new URL(`${base.replace(/\/$/, '')}/api/ExternalAuth/sign-client-assertion`);

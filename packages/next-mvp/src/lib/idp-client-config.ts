@@ -56,7 +56,7 @@ export interface BrandingConfig {
 }
 
 export interface IDPClientConfig {
-    clientId: number;
+    clientId: string;
     clientSlug: string;
     nextAuthSecret: string;
     configCacheTtlSeconds: number;
@@ -371,7 +371,7 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
 
     // Map response to our interface (IDP always returns snake_case)
     const config: IDPClientConfig = {
-        clientId: typeof rawClientId === 'string' ? parseInt(rawClientId, 10) : rawClientId,
+        clientId: String(rawClientId),
         clientSlug: configData.clientSlug ?? configData.client_slug ?? configData.slug ?? '',
         nextAuthSecret: configData.nextAuthSecret ?? configData.next_auth_secret ?? '',
         configCacheTtlSeconds: configData.configCacheTtlSeconds ?? configData.config_cache_ttl_seconds ?? 300,
@@ -420,7 +420,7 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
 
     // Validate we got what we need
     if (!config.clientId) {
-        throw new Error('[IDP_CONFIG] FATAL: clientId is 0 or missing after parsing');
+        throw new Error('[IDP_CONFIG] FATAL: clientId is empty or missing after parsing');
     }
     if (!config.nextAuthSecret) {
         throw new Error('[IDP_CONFIG] FATAL: nextAuthSecret is empty after parsing');

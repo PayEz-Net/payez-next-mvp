@@ -95,9 +95,9 @@ async function vibeServiceRequest(endpoint, options) {
         .update(stringToSign)
         .digest('base64');
     const proxyUrl = `${idpUrl}/api/vibe/proxy`;
-    // Get the numeric client ID from startup config for multi-client admin support
+    // Get the client slug from startup config for multi-client admin support
     const idpConfig = (0, startup_init_1.getStartupIDPConfig)();
-    const numericClientId = idpConfig?.clientId;
+    const idpClientId = idpConfig?.clientSlug || idpConfig?.clientId;
     try {
         const res = await fetch(proxyUrl, {
             method: 'POST',
@@ -107,7 +107,7 @@ async function vibeServiceRequest(endpoint, options) {
                 'X-Vibe-Timestamp': String(timestamp),
                 'X-Vibe-Signature': signature,
                 // For multi-client admins: specify which client context to use
-                ...(numericClientId && { 'X-Client-Id': String(numericClientId) }),
+                ...(idpClientId && { 'X-Client-Id': idpClientId }),
             },
             body: JSON.stringify({
                 endpoint,

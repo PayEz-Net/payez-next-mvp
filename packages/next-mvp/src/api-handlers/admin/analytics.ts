@@ -65,9 +65,9 @@ async function vibeServiceRequest<T = unknown>(
 
   const proxyUrl = `${idpUrl}/api/vibe/proxy`;
 
-  // Get the numeric client ID from startup config for multi-client admin support
+  // Get the client slug from startup config for multi-client admin support
   const idpConfig = getStartupIDPConfig();
-  const numericClientId = idpConfig?.clientId;
+  const idpClientId = idpConfig?.clientSlug || idpConfig?.clientId;
 
   try {
     const res = await fetch(proxyUrl, {
@@ -77,7 +77,7 @@ async function vibeServiceRequest<T = unknown>(
         'X-Vibe-Client-Id': clientId,
         'X-Vibe-Timestamp': String(timestamp),
         'X-Vibe-Signature': signature,
-        ...(numericClientId && { 'X-Client-Id': String(numericClientId) }),
+        ...(idpClientId && { 'X-Client-Id': idpClientId }),
       },
       body: JSON.stringify({
         endpoint,

@@ -45,7 +45,7 @@ export interface BrandingConfig {
     logoUrl?: string;
 }
 export interface IDPClientConfig {
-    clientId: number;
+    clientId: string;
     clientSlug: string;
     nextAuthSecret: string;
     configCacheTtlSeconds: number;
