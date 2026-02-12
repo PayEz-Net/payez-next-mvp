@@ -108,6 +108,8 @@ export interface MvpMiddlewareOptions {
   onRefreshFailure?: (status: number, isNetworkError: boolean) => void;
   /** Additional paths to bypass middleware (beyond /api/auth/ and /api/session/) */
   bypassPaths?: string[];
+  /** Paths exempt from RBAC checks (auth still enforced, just no page-permission check) */
+  rbacExemptPaths?: string[];
 }
 
 // =============================================================================
@@ -336,6 +338,7 @@ export function createMvpMiddleware(options: MvpMiddlewareOptions = {}) {
   const viabilityEndpoint = options.viabilityEndpoint || '/api/session/viability';
   const refreshEndpoint = options.refreshEndpoint || '/api/auth/refresh';
   const bypassPaths = options.bypassPaths || [];
+  const rbacExemptPaths = options.rbacExemptPaths || [];
 
   return async function middleware(request: NextRequest): Promise<NextResponse> {
     const { pathname, searchParams } = request.nextUrl;
@@ -400,6 +403,7 @@ export function createMvpMiddleware(options: MvpMiddlewareOptions = {}) {
       circuitBreaker: cb,
       logger: log,
       refreshEndpoint,
+      rbacExemptPaths,
       onRefreshSuccess: options.onRefreshSuccess,
       onRefreshFailure: options.onRefreshFailure,
     });
@@ -474,6 +478,7 @@ interface ExecuteOptions {
   circuitBreaker: CircuitBreakerProvider;
   logger: MiddlewareLogger;
   refreshEndpoint: string;
+  rbacExemptPaths: string[];
   onRefreshSuccess?: () => void;
   onRefreshFailure?: (status: number, isNetworkError: boolean) => void;
 }
@@ -491,7 +496,7 @@ async function executeDecision(
 
   switch (decision.type) {
     case 'allow':
-      return handleAllow(request, pathname, sessionPointer, sessionStatus);
+      return handleAllow(request, pathname, sessionPointer, sessionStatus, opts.rbacExemptPaths);
 
     case 'redirect':
       return redirectTo(request, decision.location, decision.clearCookies);
@@ -512,13 +517,15 @@ async function handleAllow(
   request: NextRequest,
   pathname: string,
   sessionPointer: SessionPointer,
-  sessionStatus: SessionStatus
+  sessionStatus: SessionStatus,
+  rbacExemptPaths: string[] = []
 ): Promise<NextResponse> {
   const isPublic = isUnauthenticatedRoute(pathname);
 
   if (isRBACEnabled() && !isPublic && sessionPointer.exists) {
-    // Skip RBAC for error/fallback pages to prevent redirect loops
-    if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p))) {
+    // Skip RBAC for error/fallback pages (prevent redirect loops) and app-configured exempt paths
+    if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p)) ||
+        rbacExemptPaths.some(p => pathname.startsWith(p))) {
       return NextResponse.next();
     }
 

@@ -232,6 +232,7 @@ function createMvpMiddleware(options = {}) {
     const viabilityEndpoint = options.viabilityEndpoint || '/api/session/viability';
     const refreshEndpoint = options.refreshEndpoint || '/api/auth/refresh';
     const bypassPaths = options.bypassPaths || [];
+    const rbacExemptPaths = options.rbacExemptPaths || [];
     return async function middleware(request) {
         const { pathname, searchParams } = request.nextUrl;
         // =========================================================================
@@ -287,6 +288,7 @@ function createMvpMiddleware(options = {}) {
             circuitBreaker: cb,
             logger: log,
             refreshEndpoint,
+            rbacExemptPaths,
             onRefreshSuccess: options.onRefreshSuccess,
             onRefreshFailure: options.onRefreshFailure,
         });
@@ -351,7 +353,7 @@ async function executeDecision(request, decision, pathname, sessionPointer, sess
     const safeCallback = getSafeCallbackUrl(pathname);
     switch (decision.type) {
         case 'allow':
-            return handleAllow(request, pathname, sessionPointer, sessionStatus);
+            return handleAllow(request, pathname, sessionPointer, sessionStatus, opts.rbacExemptPaths);
         case 'redirect':
             return redirectTo(request, decision.location, decision.clearCookies);
         case 'service_error':
@@ -363,11 +365,12 @@ async function executeDecision(request, decision, pathname, sessionPointer, sess
 /** Paths that must never be RBAC-checked (they are RBAC redirect targets) */
 const RBAC_EXEMPT_PATHS = ['/error', '/unauthorized', '/service-unavailable'];
 /** Handle 'allow' decision - run RBAC if enabled */
-async function handleAllow(request, pathname, sessionPointer, sessionStatus) {
+async function handleAllow(request, pathname, sessionPointer, sessionStatus, rbacExemptPaths = []) {
     const isPublic = (0, route_config_1.isUnauthenticatedRoute)(pathname);
     if ((0, rbac_check_1.isRBACEnabled)() && !isPublic && sessionPointer.exists) {
-        // Skip RBAC for error/fallback pages to prevent redirect loops
-        if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p))) {
+        // Skip RBAC for error/fallback pages (prevent redirect loops) and app-configured exempt paths
+        if (RBAC_EXEMPT_PATHS.some(p => pathname.startsWith(p)) ||
+            rbacExemptPaths.some(p => pathname.startsWith(p))) {
             return server_1.NextResponse.next();
         }
         if (!sessionPointer.clientId) {

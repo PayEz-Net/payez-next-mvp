@@ -96,5 +96,7 @@ export interface MvpMiddlewareOptions {
     onRefreshFailure?: (status: number, isNetworkError: boolean) => void;
     /** Additional paths to bypass middleware (beyond /api/auth/ and /api/session/) */
     bypassPaths?: string[];
+    /** Paths exempt from RBAC checks (auth still enforced, just no page-permission check) */
+    rbacExemptPaths?: string[];
 }
 export declare function createMvpMiddleware(options?: MvpMiddlewareOptions): (request: NextRequest) => Promise<NextResponse>;
