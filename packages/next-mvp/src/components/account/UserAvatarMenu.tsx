@@ -83,7 +83,11 @@ export function UserAvatarMenu({
     return null;
   }
 
-  const userInitial = session.user.email?.charAt(0).toUpperCase() || 'U';
+  // Derive display initial from name or email — ignore anon/internal IDs
+  const userName = (session.user as any)?.name;
+  const userEmail = session.user.email;
+  const displaySource = userName || userEmail;
+  const userInitial = displaySource?.charAt(0).toUpperCase() || '?';
 
   const handleNavigation = (path: string) => {
     setIsOpen(false);
@@ -132,11 +136,23 @@ export function UserAvatarMenu({
           role="menu"
           aria-orientation="vertical"
         >
-          {/* User email label */}
+          {/* User identity label */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-            <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
-              {session.user.email}
-            </p>
+            {userName && (
+              <p className="text-sm font-medium text-gray-700 dark:text-slate-200 truncate">
+                {userName}
+              </p>
+            )}
+            {userEmail && (
+              <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+                {userEmail}
+              </p>
+            )}
+            {!userName && !userEmail && (
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Signed in
+              </p>
+            )}
           </div>
 
           {/* Menu items */}
