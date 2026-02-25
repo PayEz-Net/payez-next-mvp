@@ -14,7 +14,7 @@
  * export const GET = createGetTableDataHandler({ getAuthOptions });
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRedisSessionRevokeHandler = exports.createRedisSessionsHandler = exports.createSiteLogsQueueHandler = exports.createSiteLogsDrainHandler = exports.createSiteLogsStatsHandler = exports.createSiteLogsHandler = exports.createAnalyticsHandler = exports.createAuditHandler = exports.createUsersHandler = exports.createSessionsHandler = exports.createQueryHandler = exports.createDeleteRecordHandler = exports.createUpdateRecordHandler = exports.createGetRecordHandler = exports.createGetTableDataHandler = exports.createGetTablesHandler = exports.createGetCollectionsHandler = void 0;
+exports.createStatsHandler = exports.createRedisSessionRevokeHandler = exports.createRedisSessionsHandler = exports.createSiteLogsQueueHandler = exports.createSiteLogsDrainHandler = exports.createSiteLogsStatsHandler = exports.createSiteLogsHandler = exports.createAnalyticsHandler = exports.createAuditHandler = exports.createUsersHandler = exports.createSessionsHandler = exports.createQueryHandler = exports.createDeleteRecordHandler = exports.createUpdateRecordHandler = exports.createGetRecordHandler = exports.createGetTableDataHandler = exports.createGetTablesHandler = exports.createGetCollectionsHandler = void 0;
 var vibe_data_1 = require("./vibe-data");
 Object.defineProperty(exports, "createGetCollectionsHandler", { enumerable: true, get: function () { return vibe_data_1.createGetCollectionsHandler; } });
 Object.defineProperty(exports, "createGetTablesHandler", { enumerable: true, get: function () { return vibe_data_1.createGetTablesHandler; } });
@@ -39,3 +39,5 @@ Object.defineProperty(exports, "createSiteLogsQueueHandler", { enumerable: true,
 var redis_sessions_1 = require("./redis-sessions");
 Object.defineProperty(exports, "createRedisSessionsHandler", { enumerable: true, get: function () { return redis_sessions_1.createRedisSessionsHandler; } });
 Object.defineProperty(exports, "createRedisSessionRevokeHandler", { enumerable: true, get: function () { return redis_sessions_1.createRedisSessionRevokeHandler; } });
+var stats_1 = require("./stats");
+Object.defineProperty(exports, "createStatsHandler", { enumerable: true, get: function () { return stats_1.createStatsHandler; } });

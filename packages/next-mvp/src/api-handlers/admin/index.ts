@@ -57,3 +57,8 @@ export {
   createRedisSessionRevokeHandler,
   type RedisSessionsHandlerConfig,
 } from './redis-sessions';
+
+export {
+  createStatsHandler,
+  type AdminStatsHandlerConfig,
+} from './stats';

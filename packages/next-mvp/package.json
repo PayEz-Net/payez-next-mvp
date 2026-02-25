@@ -1,6 +1,6 @@
 {
   "name": "@payez/next-mvp",
-  "version": "3.4.0",
+  "version": "3.6.0",
   "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -821,6 +821,26 @@
       "types": "./dist/pages/coming-soon/page.d.ts",
       "require": "./dist/pages/coming-soon/page.js",
       "default": "./dist/pages/coming-soon/page.js"
+    },
+    "./server/auth-guard": {
+      "types": "./dist/server/auth-guard.d.ts",
+      "require": "./dist/server/auth-guard.js",
+      "default": "./dist/server/auth-guard.js"
+    },
+    "./server/with-auth": {
+      "types": "./dist/server/with-auth.d.ts",
+      "require": "./dist/server/with-auth.js",
+      "default": "./dist/server/with-auth.js"
+    },
+    "./server/slim-middleware": {
+      "types": "./dist/server/slim-middleware.d.ts",
+      "require": "./dist/server/slim-middleware.js",
+      "default": "./dist/server/slim-middleware.js"
+    },
+    "./server/decode-session": {
+      "types": "./dist/server/decode-session.d.ts",
+      "require": "./dist/server/decode-session.js",
+      "default": "./dist/server/decode-session.js"
     }
   },
   "peerDependencies": {

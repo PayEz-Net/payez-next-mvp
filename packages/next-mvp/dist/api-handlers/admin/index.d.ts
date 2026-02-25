@@ -19,3 +19,4 @@ export { createAuditHandler, type AdminAuditHandlerConfig, } from './audit';
 export { createAnalyticsHandler, type AdminAnalyticsHandlerConfig, } from './analytics';
 export { createSiteLogsHandler, createSiteLogsStatsHandler, createSiteLogsDrainHandler, createSiteLogsQueueHandler, type SiteLogsHandlerConfig, } from './site-logs';
 export { createRedisSessionsHandler, createRedisSessionRevokeHandler, type RedisSessionsHandlerConfig, } from './redis-sessions';
+export { createStatsHandler, type AdminStatsHandlerConfig, } from './stats';
