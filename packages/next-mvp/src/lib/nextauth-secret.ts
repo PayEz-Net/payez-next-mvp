@@ -41,7 +41,8 @@ export async function resolveNextAuthSecret(): Promise<string> {
     issuer: clientIdStr,
     subject: clientIdStr,
     audience: 'urn:payez:externalauth:nextauthsecret',
-    expires_in: 60
+    expires_in: 60,
+    client_secret: process.env.PAYEZ_CLIENT_SECRET,
   };
 
   const signingResp = await fetch(signingUrl.toString(), {

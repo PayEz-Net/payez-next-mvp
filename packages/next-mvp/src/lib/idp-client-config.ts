@@ -291,7 +291,8 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
         issuer: clientIdStr,
         subject: clientIdStr,
         audience: 'urn:payez:externalauth:clientconfig',
-        expires_in: 60
+        expires_in: 60,
+        client_secret: process.env.PAYEZ_CLIENT_SECRET,
     };
 
     const signingResp = await fetch(signingUrl, {
