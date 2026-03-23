@@ -196,6 +196,9 @@ export async function getIDPClientConfig(forceRefresh: boolean = false): Promise
     if (!clientIdStr) {
         throw new Error('[IDP_CONFIG] FATAL: CLIENT_ID or NEXT_PUBLIC_CLIENT_ID must be set');
     }
+    if (!process.env.PAYEZ_CLIENT_SECRET) {
+        throw new Error('[IDP_CONFIG] FATAL: PAYEZ_CLIENT_SECRET is required. Inject via container env or K8s Secret — never .env files.');
+    }
 
     // Start fetch and store promise so concurrent callers wait for same result
     pendingFetch = fetchConfigFromIDP(idpUrl, clientIdStr)
