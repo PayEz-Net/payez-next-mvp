@@ -1,15 +1,16 @@
 /**
- * Roles Admin Page for @payez/next-mvp
+ * Role Management Admin Page (/admin/roles)
  *
- * Read-only admin interface for viewing roles and permissions (/admin/roles).
- * MVP scope: View IDP roles and their page permissions only.
- * Role creation/editing deferred to post-MVP.
+ * Design: Aurum (DESIGN_SPEC.md)
+ * Three sections:
+ * 1. Available Roles — Cards showing SiteAdmin, ClientAdmin
+ * 2. User Assignments — Table with inline role dropdowns
+ * 3. Change History — Audit log of role changes
  *
- * @see docs/specs/ROLES_MANAGEMENT_SPEC.md
+ * Design Principles:
+ * - No shadows, gradients, or animation
+ * - One accent color (blue #0066cc)
+ * - Inline interactions (no modals)
+ * - Scan-friendly tables and lists
  */
-interface RolesAdminPageProps {
-    rolesEndpoint?: string;
-    matrixEndpoint?: string;
-}
-export default function RolesAdminPage({ rolesEndpoint, matrixEndpoint, }: RolesAdminPageProps): import("react/jsx-runtime").JSX.Element;
-export {};
+export default function RolesAdminPage(): import("react/jsx-runtime").JSX.Element;

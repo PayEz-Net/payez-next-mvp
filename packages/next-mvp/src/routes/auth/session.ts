@@ -54,10 +54,9 @@ export async function GET(req: NextRequest) {
 
     if (!token) {
       console.warn('[SESSION_ROUTE] getToken returned null');
-      return NextResponse.json({
-        authenticated: false,
-        message: 'No session found'
-      }, { status: 200 });
+      // MUST return empty {} — NextAuth's useSession() treats any non-empty
+      // response object as "authenticated", causing redirect loops on login page.
+      return NextResponse.json({});
     }
 
     // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)

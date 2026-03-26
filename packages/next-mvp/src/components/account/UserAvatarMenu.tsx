@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { User, Settings, Shield, LogOut } from 'lucide-react';
 
 export interface UserAvatarMenuProps {
@@ -119,12 +120,23 @@ export function UserAvatarMenu({
       {/* Avatar trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center h-10 w-10 rounded-full bg-[#349AD5] text-white font-semibold text-lg hover:bg-[#2980b9] transition-colors focus:outline-none focus:ring-2 focus:ring-[#349AD5] focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+        className="flex items-center justify-center h-10 w-10 rounded-full overflow-hidden bg-blue-500 text-white font-semibold text-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
         aria-label="User menu"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        {userInitial}
+        {session.user.image ? (
+          <Image
+            src={session.user.image}
+            alt=""
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-full object-cover"
+            unoptimized
+          />
+        ) : (
+          userInitial
+        )}
       </button>
 
       {/* Dropdown menu */}
@@ -138,21 +150,39 @@ export function UserAvatarMenu({
         >
           {/* User identity label */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-            {userName && (
-              <p className="text-sm font-medium text-gray-700 dark:text-slate-200 truncate">
-                {userName}
-              </p>
-            )}
-            {userEmail && (
-              <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
-                {userEmail}
-              </p>
-            )}
-            {!userName && !userEmail && (
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                Signed in
-              </p>
-            )}
+            <div className="flex items-center gap-3">
+              {session.user.image ? (
+                <Image
+                  src={session.user.image}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full flex-shrink-0"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                  {userInitial}
+                </div>
+              )}
+              <div className="min-w-0">
+                {userName && (
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200 truncate">
+                    {userName}
+                  </p>
+                )}
+                {userEmail && (
+                  <p className="text-sm text-gray-500 dark:text-slate-400 truncate">
+                    {userEmail}
+                  </p>
+                )}
+                {!userName && !userEmail && (
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    Signed in
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Menu items */}

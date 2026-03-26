@@ -10,8 +10,10 @@
  * - Redis buffering with 1-week TTL
  * - Graceful degradation on failure
  */
-import Transport from 'winston-transport';
-export interface VibeLogTransportOptions extends Transport.TransportStreamOptions {
+declare let TransportBase: any;
+export interface VibeLogTransportOptions {
+    /** Winston transport level */
+    level?: string;
     /** Redis URL (optional, uses REDIS_URL env var by default) */
     redisUrl?: string;
     /** Vibe client ID (for log metadata) */
@@ -30,7 +32,7 @@ export interface VibeLogTransportOptions extends Transport.TransportStreamOption
 /**
  * Winston transport that buffers logs to Redis for Vibe drain processing
  */
-export declare class VibeLogTransport extends Transport {
+export declare class VibeLogTransport extends TransportBase {
     private vibeClientId;
     private appSlug;
     private minLevelNum;

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateSessionToken = generateSessionToken;
 exports.createSession = createSession;
 exports.getSession = getSession;
+exports.touchSession = touchSession;
 exports.getSessionWithVersion = getSessionWithVersion;
 exports.isAccessTokenFresh = isAccessTokenFresh;
 exports.deleteSession = deleteSession;
@@ -94,6 +95,13 @@ async function getSession(sessionToken) {
         console.error('[SESSION-STORE] Failed to parse session data');
         return null;
     }
+}
+/**
+ * Refresh session TTL without reading/writing data (sliding window expiry).
+ */
+async function touchSession(token) {
+    const key = getSessionKey(token);
+    await redis_1.default.expire(key, SESSION_TTL);
 }
 /**
  * Retrieves a session along with a version identifier for optimistic locking.

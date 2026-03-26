@@ -11,15 +11,29 @@
  * - Graceful degradation on failure
  */
 
-import Transport from 'winston-transport';
 import { getRedis } from '../lib/redis';
+
+// Dynamic import — winston is a peerDependency and may not be installed.
+// We resolve the base class lazily so builds don't break without it.
+let TransportBase: any;
+try {
+  TransportBase = require('winston-transport');
+} catch {
+  // Fallback: minimal base class for when winston is not installed
+  TransportBase = class {
+    constructor(_opts?: any) {}
+    emit(_event: string, _info: any) {}
+  };
+}
 
 /** Redis key for pending log entries */
 const REDIS_LOG_KEY = 'vibe:logs:pending';
 /** TTL in seconds: 1 week */
 const REDIS_LOG_TTL = 7 * 24 * 60 * 60;
 
-export interface VibeLogTransportOptions extends Transport.TransportStreamOptions {
+export interface VibeLogTransportOptions {
+  /** Winston transport level */
+  level?: string;
   /** Redis URL (optional, uses REDIS_URL env var by default) */
   redisUrl?: string;
   /** Vibe client ID (for log metadata) */
@@ -55,7 +69,7 @@ const LEVEL_ORDER: Record<string, number> = {
 /**
  * Winston transport that buffers logs to Redis for Vibe drain processing
  */
-export class VibeLogTransport extends Transport {
+export class VibeLogTransport extends TransportBase {
   private vibeClientId: string;
   private appSlug: string;
   private minLevelNum: number;

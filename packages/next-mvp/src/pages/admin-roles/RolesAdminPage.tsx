@@ -1,356 +1,532 @@
 /**
- * Roles Admin Page for @payez/next-mvp
+ * Role Management Admin Page (/admin/roles)
  *
- * Read-only admin interface for viewing roles and permissions (/admin/roles).
- * MVP scope: View IDP roles and their page permissions only.
- * Role creation/editing deferred to post-MVP.
+ * Design: Aurum (DESIGN_SPEC.md)
+ * Three sections:
+ * 1. Available Roles — Cards showing SiteAdmin, ClientAdmin
+ * 2. User Assignments — Table with inline role dropdowns
+ * 3. Change History — Audit log of role changes
  *
- * @see docs/specs/ROLES_MANAGEMENT_SPEC.md
+ * Design Principles:
+ * - No shadows, gradients, or animation
+ * - One accent color (blue #0066cc)
+ * - Inline interactions (no modals)
+ * - Scan-friendly tables and lists
  */
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLayout, useColors } from '../../theme/useTheme';
-import { RoleBadge } from '../roles/components';
+import React, { useState } from 'react';
 
-// Types
-interface PagePermission {
-  page_permission_id: number;
-  route_pattern: string;
-  display_name: string;
-  requires_2fa: boolean;
+// Mock data
+const MOCK_ROLES = [
+  {
+    id: 1,
+    name: 'SiteAdmin',
+    description: 'System-wide administrator. Manages all vibe_app features.',
+    userCount: 1,
+    lastChanged: '3/10/2026 by Admin',
+  },
+  {
+    id: 2,
+    name: 'ClientAdmin',
+    description: 'Resume admin for Ideal Resume. Manages users, resumes, audit logs.',
+    userCount: 2,
+    lastChanged: '3/9/2026 by Admin',
+  },
+];
+
+const MOCK_USERS = [
+  { id: 1, email: 'alice@example.com', role: 'ClientAdmin', assigned: '3/10/2026' },
+  { id: 2, email: 'bob@example.com', role: 'SiteAdmin', assigned: '2/28/2026' },
+  { id: 3, email: 'carol@example.com', role: null, assigned: null },
+  { id: 4, email: 'dave@example.com', role: 'ClientAdmin', assigned: '3/5/2026' },
+  { id: 5, email: 'eve@example.com', role: 'ClientAdmin', assigned: '3/8/2026' },
+];
+
+const MOCK_CHANGES = [
+  { timestamp: '3/10/2026, 10:15 AM', event: 'Alice assigned to ClientAdmin by Admin User' },
+  { timestamp: '3/9/2026, 2:30 PM', event: 'Bob assigned to SiteAdmin by Admin User' },
+  { timestamp: '3/8/2026, 4:45 PM', event: 'Carol removed from ClientAdmin by Admin User' },
+  { timestamp: '3/8/2026, 3:00 PM', event: 'SiteAdmin edited: Description changed by Admin User' },
+];
+
+interface User {
+  id: number;
+  email: string;
+  role: string | null;
+  assigned: string | null;
 }
 
-interface Role {
-  role_name: string;
-  display_name?: string;
-  description?: string;
-  permission_count?: number;
-  permissions?: PagePermission[];
-}
+export default function RolesAdminPage() {
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [tempRole, setTempRole] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-interface MatrixData {
-  roles: string[];
-  pages: {
-    page_permission_id: number;
-    route_pattern: string;
-    display_name: string;
-    requires_2fa: boolean;
-    role_access: Record<string, boolean>;
-  }[];
-}
+  const filteredUsers = users.filter(
+    (u) => u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-type ViewMode = 'list' | 'matrix';
-
-interface RolesAdminPageProps {
-  rolesEndpoint?: string;
-  matrixEndpoint?: string;
-}
-
-export default function RolesAdminPage({
-  rolesEndpoint = '/api/v1/admin/roles',
-  matrixEndpoint = '/api/v1/admin/permissions-matrix',
-}: RolesAdminPageProps) {
-  const layout = useLayout();
-  const colors = useColors();
-
-  const isDark = colors?.background?.includes('slate-9') ||
-                 colors?.background?.includes('gray-9') ||
-                 colors?.card?.includes('slate-8');
-
-  // State
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [matrixData, setMatrixData] = useState<MatrixData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expandedRole, setExpandedRole] = useState<string | null>(null);
-
-  // Theme colors
-  const bgColor = isDark ? 'bg-slate-900' : 'bg-gray-50';
-  const cardBg = isDark ? 'bg-slate-800' : 'bg-white';
-  const borderColor = isDark ? 'border-slate-700' : 'border-gray-200';
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900';
-  const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
-  const hoverBg = isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-50';
-
-  // Fetch data
-  const fetchRoles = useCallback(async () => {
-    try {
-      const res = await fetch(rolesEndpoint, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setRoles(data.roles || data.idp_roles || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch roles:', err);
-    }
-  }, [rolesEndpoint]);
-
-  const fetchMatrix = useCallback(async () => {
-    try {
-      const res = await fetch(matrixEndpoint, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setMatrixData(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch matrix:', err);
-    }
-  }, [matrixEndpoint]);
-
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([fetchRoles(), fetchMatrix()])
-      .finally(() => setLoading(false));
-  }, [fetchRoles, fetchMatrix]);
-
-  const toggleRoleExpanded = (roleName: string) => {
-    setExpandedRole(expandedRole === roleName ? null : roleName);
+  const handleEditRole = (userId: number, currentRole: string | null) => {
+    setEditingUserId(userId);
+    setTempRole(currentRole);
   };
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen ${bgColor} flex items-center justify-center`}>
-        <div className="flex flex-col items-center space-y-4">
-          <svg className="animate-spin h-8 w-8 text-blue-500" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-          </svg>
-          <p className={textMuted}>Loading roles...</p>
-        </div>
-      </div>
+  const handleSaveRole = (userId: number) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === userId ? { ...u, role: tempRole, assigned: '3/10/2026' } : u
+      )
     );
-  }
+    setMessage(`Role updated`);
+    setEditingUserId(null);
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleRemoveRole = (userId: number) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: null, assigned: null } : u)));
+    setMessage(`Role removed`);
+    setTimeout(() => setMessage(null), 3000);
+  };
 
   return (
-    <div className={`min-h-screen ${bgColor}`}>
-      <div className={`max-w-6xl mx-auto ${layout?.padding || 'p-6'}`}>
+    <div style={{ background: '#f8f8f8', minHeight: '100vh', padding: '40px 20px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className={`text-3xl font-bold ${textPrimary}`}>Role Permissions</h1>
-            <p className={`mt-1 ${textMuted}`}>View IDP roles and their page access permissions</p>
-          </div>
-          <a href="/admin" className={`text-sm hover:underline ${textMuted}`}>
-            Back to Admin
-          </a>
+        <div style={{ marginBottom: '40px' }}>
+          <h1
+            style={{
+              fontSize: '32px',
+              fontWeight: 400,
+              color: '#333',
+              marginBottom: '8px',
+            }}
+          >
+            Role Management
+          </h1>
+          <p style={{ fontSize: '16px', color: '#666', fontWeight: 400 }}>
+            Manage who has access to what role
+          </p>
         </div>
 
-        {/* View Toggle */}
-        <div className={`flex border-b ${borderColor} mb-6`}>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-              viewMode === 'list'
-                ? 'border-blue-500 text-blue-500'
-                : `border-transparent ${textMuted} hover:text-blue-400`
-            }`}
-          >
-            Role List
-          </button>
-          <button
-            onClick={() => setViewMode('matrix')}
-            className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-              viewMode === 'matrix'
-                ? 'border-blue-500 text-blue-500'
-                : `border-transparent ${textMuted} hover:text-blue-400`
-            }`}
-          >
-            Permissions Matrix
-          </button>
-        </div>
+        <div style={{ height: '1px', background: '#e0e0e0', margin: '24px 0' }} />
 
-        {/* Role List View */}
-        {viewMode === 'list' && (
-          <div className={`${cardBg} border ${borderColor} rounded-lg overflow-hidden`}>
-            <div className={`px-4 py-3 border-b ${borderColor}`}>
-              <p className={`text-sm ${textMuted}`}>
-                Click a role to see what pages it grants access to
-              </p>
-            </div>
-            <div className={`divide-y ${borderColor}`}>
-              {roles.length === 0 ? (
-                <div className={`p-8 text-center ${textMuted}`}>
-                  No roles found
+        {/* Section 1: Available Roles */}
+        <section style={{ marginBottom: '60px' }}>
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 400,
+              color: '#666',
+              marginBottom: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            Available Roles
+          </h2>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '24px',
+            }}
+          >
+            {MOCK_ROLES.map((role) => (
+              <div
+                key={role.id}
+                style={{
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'all 0.2s ease',
+                  cursor: 'default',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f9f9f9';
+                  e.currentTarget.style.borderColor = '#d0d0d0';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.borderColor = '#e0e0e0';
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    color: '#333',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {role.name}
+                </h3>
+                <p
+                  style={{
+                    fontSize: '14px',
+                    color: '#666',
+                    marginBottom: '16px',
+                    flex: 1,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {role.description}
+                </p>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#999' }}>Users: {role.userCount}</div>
+                  <div style={{ fontSize: '12px', color: '#999' }}>
+                    Last changed: {role.lastChanged}
+                  </div>
                 </div>
-              ) : (
-                roles.map((role) => (
-                  <div key={role.role_name}>
-                    <button
-                      onClick={() => toggleRoleExpanded(role.role_name)}
-                      className={`w-full px-4 py-4 flex items-center justify-between ${hoverBg} transition-colors`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <svg
-                          className={`w-5 h-5 ${textMuted} transition-transform ${expandedRole === role.role_name ? 'rotate-90' : ''}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <div className="text-left">
-                          <div className={`font-medium ${textPrimary}`}>
-                            {role.display_name || role.role_name}
-                          </div>
-                          <div className={`text-sm ${textMuted}`}>
-                            {role.role_name}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <RoleBadge roleName="IDP" source="idp" size="sm" isDark={isDark} />
-                        <span className={`text-sm ${textMuted}`}>
-                          {role.permission_count ?? role.permissions?.length ?? 0} pages
-                        </span>
-                      </div>
-                    </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      background: '#0066cc',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#0052a3')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#0066cc')}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      background: 'white',
+                      color: '#333',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-                    {expandedRole === role.role_name && (
-                      <div className={`px-4 pb-4 ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
-                        <div className="pl-8">
-                          {role.permissions && role.permissions.length > 0 ? (
-                            <div className="space-y-2 pt-2">
-                              {role.permissions.map((perm) => (
-                                <div
-                                  key={perm.page_permission_id}
-                                  className={`flex items-center justify-between py-2 px-3 rounded ${isDark ? 'bg-slate-700/50' : 'bg-white'} border ${borderColor}`}
-                                >
-                                  <div>
-                                    <span className={`font-mono text-sm ${textPrimary}`}>
-                                      {perm.route_pattern}
-                                    </span>
-                                    {perm.display_name && (
-                                      <span className={`ml-2 text-sm ${textMuted}`}>
-                                        - {perm.display_name}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {perm.requires_2fa && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                      2FA Required
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className={`py-4 text-sm ${textMuted}`}>
-                              No page permissions assigned to this role
-                            </p>
-                          )}
-                        </div>
+        <div style={{ height: '1px', background: '#e0e0e0', margin: '24px 0' }} />
+
+        {/* Section 2: User Assignments */}
+        <section style={{ marginBottom: '60px' }}>
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 400,
+              color: '#666',
+              marginBottom: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            User Assignments
+          </h2>
+
+          {/* Search */}
+          <div style={{ marginBottom: '24px' }}>
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                fontSize: '14px',
+                border: '1px solid #e0e0e0',
+                borderRadius: '4px',
+                background: 'white',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* Message */}
+          {message && (
+            <div
+              style={{
+                padding: '8px 12px',
+                background: '#e8f5e9',
+                color: '#2e7d32',
+                borderRadius: '4px',
+                marginBottom: '12px',
+                fontSize: '13px',
+              }}
+            >
+              ✓ {message}
+            </div>
+          )}
+
+          {/* Table */}
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              background: 'white',
+              border: '1px solid #e0e0e0',
+              borderRadius: '4px',
+              overflow: 'hidden',
+            }}
+          >
+            <thead>
+              <tr style={{ background: '#f8f8f8', borderBottom: '1px solid #e0e0e0' }}>
+                <th
+                  style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '12px',
+                    color: '#999',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  User
+                </th>
+                <th
+                  style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '12px',
+                    color: '#999',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  Role
+                </th>
+                <th
+                  style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '12px',
+                    color: '#999',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  Assigned
+                </th>
+                <th
+                  style={{
+                    padding: '16px',
+                    textAlign: 'left',
+                    fontSize: '12px',
+                    color: '#999',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: 'normal',
+                  }}
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
+                <tr
+                  key={user.id}
+                  style={{
+                    borderBottom: '1px solid #e0e0e0',
+                    height: '48px',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                >
+                  <td style={{ padding: '16px', fontSize: '14px', color: '#333' }}>
+                    {user.email}
+                  </td>
+                  <td style={{ padding: '16px', fontSize: '14px' }}>
+                    {editingUserId === user.id ? (
+                      <select
+                        value={tempRole || ''}
+                        onChange={(e) => setTempRole(e.target.value || null)}
+                        style={{
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          border: '1px solid #0066cc',
+                          borderRadius: '4px',
+                          background: 'white',
+                          color: '#333',
+                        }}
+                      >
+                        <option value="">— Remove role —</option>
+                        <option value="SiteAdmin">SiteAdmin</option>
+                        <option value="ClientAdmin">ClientAdmin</option>
+                      </select>
+                    ) : user.role ? (
+                      <span
+                        style={{
+                          background: '#e3f2fd',
+                          color: '#0066cc',
+                          padding: '6px 10px',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          display: 'inline-block',
+                        }}
+                      >
+                        {user.role}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#999', fontStyle: 'italic' }}>(none)</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '16px', fontSize: '12px', color: '#999' }}>
+                    {user.assigned || '—'}
+                  </td>
+                  <td style={{ padding: '16px', fontSize: '13px' }}>
+                    {editingUserId === user.id ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleSaveRole(user.id)}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#0066cc',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = '#0052a3')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = '#0066cc')}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingUserId(null)}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'white',
+                            color: '#333',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {user.role && (
+                          <button
+                            onClick={() => handleEditRole(user.id, user.role)}
+                            style={{
+                              padding: '6px 10px',
+                              background: 'white',
+                              color: '#0066cc',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                          >
+                            ↓
+                          </button>
+                        )}
+                        {!user.role ? (
+                          <button
+                            onClick={() => handleEditRole(user.id, null)}
+                            style={{
+                              padding: '6px 10px',
+                              background: 'white',
+                              color: '#0066cc',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#f5f5f5')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                          >
+                            +
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleRemoveRole(user.id)}
+                            style={{
+                              padding: '6px 10px',
+                              background: 'white',
+                              color: '#cc0000',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#fff0f0')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     )}
-                  </div>
-                ))
-              )}
-            </div>
-            <div className={`px-4 py-3 border-t ${borderColor} ${textMuted} text-sm`}>
-              {roles.length} roles total
-            </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ marginTop: '12px', fontSize: '12px', color: '#999' }}>
+            {filteredUsers.length} of {users.length} users shown
           </div>
-        )}
+        </section>
 
-        {/* Matrix View */}
-        {viewMode === 'matrix' && matrixData && (
-          <div className={`${cardBg} border ${borderColor} rounded-lg overflow-hidden`}>
-            <div className={`px-4 py-3 border-b ${borderColor}`}>
-              <p className={`text-sm ${textMuted}`}>
-                Read-only view of which roles have access to which pages
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={isDark ? 'bg-slate-700/50' : 'bg-gray-50'}>
-                  <tr>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${textMuted} sticky left-0 ${isDark ? 'bg-slate-700' : 'bg-gray-50'}`}>
-                      Page
-                    </th>
-                    {matrixData.roles.map((role) => (
-                      <th key={role} className={`px-4 py-3 text-center text-sm font-medium ${textMuted} whitespace-nowrap`}>
-                        {role}
-                      </th>
-                    ))}
-                    <th className={`px-4 py-3 text-center text-sm font-medium ${textMuted}`}>2FA</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${borderColor}`}>
-                  {matrixData.pages.map((page) => (
-                    <tr key={page.page_permission_id} className={hoverBg}>
-                      <td className={`px-4 py-3 ${textPrimary} sticky left-0 ${cardBg}`}>
-                        <div>
-                          <span className="font-mono text-sm">{page.route_pattern}</span>
-                          {page.display_name && (
-                            <span className={`block text-xs ${textMuted}`}>{page.display_name}</span>
-                          )}
-                        </div>
-                      </td>
-                      {matrixData.roles.map((role) => (
-                        <td key={role} className="px-4 py-3 text-center">
-                          {page.role_access[role] ? (
-                            <svg className="w-5 h-5 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className={`w-5 h-5 mx-auto ${textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-center">
-                        {page.requires_2fa && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                            2FA
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className={`px-4 py-3 border-t ${borderColor} ${textMuted} text-sm flex items-center gap-4`}>
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Access granted
-              </span>
-              <span className="flex items-center gap-2">
-                <svg className={`w-4 h-4 ${textMuted}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                No access
-              </span>
-            </div>
-          </div>
-        )}
+        <div style={{ height: '1px', background: '#e0e0e0', margin: '24px 0' }} />
 
-        {viewMode === 'matrix' && !matrixData && (
-          <div className={`${cardBg} border ${borderColor} rounded-lg p-8 text-center ${textMuted}`}>
-            Unable to load permissions matrix
+        {/* Section 3: Change History */}
+        <section>
+          <h2
+            style={{
+              fontSize: '18px',
+              fontWeight: 400,
+              color: '#666',
+              marginBottom: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            Recent Changes
+          </h2>
+          <div style={{ background: 'white', border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+            {MOCK_CHANGES.map((change, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '16px',
+                  borderBottom: idx < MOCK_CHANGES.length - 1 ? '1px solid #e0e0e0' : 'none',
+                }}
+              >
+                <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>
+                  {change.timestamp}
+                </div>
+                <div style={{ fontSize: '14px', color: '#333' }}>{change.event}</div>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* Info Banner */}
-        <div className={`mt-6 p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
-          <div className="flex items-start gap-3">
-            <svg className={`w-5 h-5 mt-0.5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className={`font-medium ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>
-                Roles are managed by your Identity Provider
-              </p>
-              <p className={`text-sm mt-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
-                Role assignments are controlled through your organization&apos;s IDP. Contact your system administrator to request role changes.
-              </p>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );

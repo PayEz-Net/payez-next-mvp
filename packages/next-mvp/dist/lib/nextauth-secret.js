@@ -31,6 +31,9 @@ async function resolveNextAuthSecret() {
     const clientIdStr = process.env.CLIENT_ID;
     if (!clientIdStr || clientIdStr.trim() === '')
         throw new Error('CLIENT_ID is required (e.g., "ideal_resume_website")');
+    if (!process.env.PAYEZ_CLIENT_SECRET) {
+        throw new Error('[NEXTAUTH-SECRET] FATAL: PAYEZ_CLIENT_SECRET is required. Inject via container env or K8s Secret — never .env files.');
+    }
     // Step 1: Request IDP to sign a client assertion (IDP has the keys, not us)
     const signingUrl = new URL(`${base.replace(/\/$/, '')}/api/ExternalAuth/sign-client-assertion`);
     // Client ID passed via X-Client-Id header, not query string
@@ -38,7 +41,8 @@ async function resolveNextAuthSecret() {
         issuer: clientIdStr,
         subject: clientIdStr,
         audience: 'urn:payez:externalauth:nextauthsecret',
-        expires_in: 60
+        expires_in: 60,
+        client_secret: process.env.PAYEZ_CLIENT_SECRET,
     };
     const signingResp = await fetch(signingUrl.toString(), {
         method: 'POST',
@@ -75,7 +79,7 @@ async function resolveNextAuthSecret() {
             'X-Client-Id': clientIdStr,
             'X-Correlation-Id': (0, crypto_1.randomUUID)().replace(/-/g, ''),
         },
-        body: JSON.stringify({ client_assertion }),
+        body: JSON.stringify({ client_assertion, client_secret: process.env.PAYEZ_CLIENT_SECRET }),
         cache: 'no-store'
     });
     if (!proxyResp.ok) {

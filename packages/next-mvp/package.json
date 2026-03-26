@@ -1,6 +1,6 @@
 {
   "name": "@payez/next-mvp",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -686,6 +686,11 @@
       "types": "./dist/components/account/UserAvatarMenu.d.ts",
       "require": "./dist/components/account/UserAvatarMenu.js",
       "default": "./dist/components/account/UserAvatarMenu.js"
+    },
+    "./components/account/MobileNavDrawer": {
+      "types": "./dist/components/account/MobileNavDrawer.d.ts",
+      "require": "./dist/components/account/MobileNavDrawer.js",
+      "default": "./dist/components/account/MobileNavDrawer.js"
     },
     "./pages/security": {
       "import": "./dist/pages/security/index.js",

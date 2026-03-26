@@ -2,7 +2,7 @@
 // Type augmentation for NextAuth - included via ambient module declaration
 // Note: Type declarations are picked up automatically via tsconfig.json, no explicit import needed
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.queryAuditLog = exports.writeAuditLog = exports.getHealthMetrics = exports.getErrorMetrics = exports.useAdminAnalytics = exports.useAuditLog = exports.useHealthMetrics = exports.useErrorMetrics = exports.AdminAnalyticsLayout = exports.AuditLogViewer = exports.HealthMetricsCard = exports.ErrorMetricsCard = exports.UserAvatarMenu = exports.createMvpMiddleware = exports.getRouteConfig = exports.configurePublicRoutes = exports.isUnauthenticatedRoute = exports.makeAuthDecision = exports.useTraditionalAuthEnabled = exports.useFederatedAuthEnabled = exports.useFederatedProviders = exports.useAuthMode = exports.useAuthConfig = exports.AuthProvider = exports.useAnonSession = exports.fetchWithAuth = void 0;
+exports.queryAuditLog = exports.writeAuditLog = exports.getHealthMetrics = exports.getErrorMetrics = exports.useAdminAnalytics = exports.useAuditLog = exports.useHealthMetrics = exports.useErrorMetrics = exports.AdminAnalyticsLayout = exports.AuditLogViewer = exports.HealthMetricsCard = exports.ErrorMetricsCard = exports.MobileNavDrawer = exports.UserAvatarMenu = exports.createMvpMiddleware = exports.getRouteConfig = exports.configurePublicRoutes = exports.isUnauthenticatedRoute = exports.makeAuthDecision = exports.useTraditionalAuthEnabled = exports.useFederatedAuthEnabled = exports.useFederatedProviders = exports.useAuthMode = exports.useAuthConfig = exports.AuthProvider = exports.useAnonSession = exports.fetchWithAuth = void 0;
 // NOTE: Server-only exports are NOT exported from the root to prevent bundling Node.js modules in client code.
 // Server-side code should import from subpath exports:
 // - Session management: import { sessionStore } from '@payez/next-mvp/lib/session-store'
@@ -38,6 +38,7 @@ Object.defineProperty(exports, "createMvpMiddleware", { enumerable: true, get: f
 // Account Components
 var account_1 = require("./components/account");
 Object.defineProperty(exports, "UserAvatarMenu", { enumerable: true, get: function () { return account_1.UserAvatarMenu; } });
+Object.defineProperty(exports, "MobileNavDrawer", { enumerable: true, get: function () { return account_1.MobileNavDrawer; } });
 // Admin Logging & Analytics (client-side components and hooks)
 var logging_1 = require("./logging");
 Object.defineProperty(exports, "ErrorMetricsCard", { enumerable: true, get: function () { return logging_1.ErrorMetricsCard; } });

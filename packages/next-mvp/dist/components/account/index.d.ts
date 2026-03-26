@@ -5,3 +5,5 @@
  */
 export { UserAvatarMenu } from './UserAvatarMenu';
 export type { UserAvatarMenuProps } from './UserAvatarMenu';
+export { MobileNavDrawer } from './MobileNavDrawer';
+export type { MobileNavDrawerProps, NavItem, NavSection } from './MobileNavDrawer';

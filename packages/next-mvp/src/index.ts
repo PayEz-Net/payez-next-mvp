@@ -29,8 +29,8 @@ export { isUnauthenticatedRoute, configurePublicRoutes, getRouteConfig } from '.
 export { createMvpMiddleware } from './middleware/create-middleware';
 
 // Account Components
-export { UserAvatarMenu } from './components/account';
-export type { UserAvatarMenuProps } from './components/account';
+export { UserAvatarMenu, MobileNavDrawer } from './components/account';
+export type { UserAvatarMenuProps, MobileNavDrawerProps, NavItem, NavSection } from './components/account';
 
 // Admin Logging & Analytics (client-side components and hooks)
 export {

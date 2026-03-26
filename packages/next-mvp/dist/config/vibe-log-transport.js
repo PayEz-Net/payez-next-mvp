@@ -11,14 +11,23 @@
  * - Redis buffering with 1-week TTL
  * - Graceful degradation on failure
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VibeLogTransport = void 0;
 exports.createVibeLogTransport = createVibeLogTransport;
-const winston_transport_1 = __importDefault(require("winston-transport"));
 const redis_1 = require("../lib/redis");
+// Dynamic import — winston is a peerDependency and may not be installed.
+// We resolve the base class lazily so builds don't break without it.
+let TransportBase;
+try {
+    TransportBase = require('winston-transport');
+}
+catch {
+    // Fallback: minimal base class for when winston is not installed
+    TransportBase = class {
+        constructor(_opts) { }
+        emit(_event, _info) { }
+    };
+}
 /** Redis key for pending log entries */
 const REDIS_LOG_KEY = 'vibe:logs:pending';
 /** TTL in seconds: 1 week */
@@ -33,7 +42,7 @@ const LEVEL_ORDER = {
 /**
  * Winston transport that buffers logs to Redis for Vibe drain processing
  */
-class VibeLogTransport extends winston_transport_1.default {
+class VibeLogTransport extends TransportBase {
     vibeClientId;
     appSlug;
     minLevelNum;

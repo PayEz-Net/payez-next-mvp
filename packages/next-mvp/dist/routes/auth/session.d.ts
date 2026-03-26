@@ -21,36 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * - Token expiry status
  * - Session validity
  */
-export declare function GET(req: NextRequest): Promise<NextResponse<{
-    authenticated: boolean;
-    message: string;
-}> | NextResponse<{
-    user: {
-        id: string | undefined;
-        email: string | null | undefined;
-        name: string | null | undefined;
-        image: any;
-        roles: string[];
-        twoFactorSessionVerified: boolean;
-        requiresTwoFactor: boolean;
-        authenticationMethods: string[] | undefined;
-        authenticationLevel: string | undefined;
-        mfaCompletedAt: number | undefined;
-        mfaExpiresAt: number | undefined;
-        mfaValidityHours: number | undefined;
-        oauthProvider: string | undefined;
-        idpClientId: string | undefined;
-        merchantId: string | undefined;
-    };
-    sessionToken: any;
-    accessToken: string | undefined;
-    refreshToken: string | undefined;
-    accessTokenExpires: number | undefined;
-    expires: string;
-}> | NextResponse<{
-    error: string;
-    details: string;
-}>>;
+export declare function GET(req: NextRequest): Promise<NextResponse<{}>>;
 /**
  * POST /api/auth/session - Update session data
  *

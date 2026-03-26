@@ -35,6 +35,10 @@ export declare function createSession(data: SessionData): Promise<string>;
  */
 export declare function getSession(sessionToken: string): Promise<SessionData | null>;
 /**
+ * Refresh session TTL without reading/writing data (sliding window expiry).
+ */
+export declare function touchSession(token: string): Promise<void>;
+/**
  * Retrieves a session along with a version identifier for optimistic locking.
  * @param sessionToken The session token to look up.
  * @returns An object with session and version, or null if not found.

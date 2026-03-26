@@ -160,6 +160,7 @@ async function idpOAuthCallback(oauthData) {
                 access_token: oauthData.accessToken || '',
                 refresh_token: oauthData.refreshToken || '',
                 expires_at: oauthData.expiresAt || 0,
+                client_id: clientId,
             }),
         });
         if (!response.ok) {
