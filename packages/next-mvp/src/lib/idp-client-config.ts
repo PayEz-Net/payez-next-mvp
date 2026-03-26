@@ -187,21 +187,22 @@ export async function getIDPClientConfig(forceRefresh: boolean = false): Promise
     }
 
     // Layer 3: Fetch from IDP
+    const internalIdpUrl = process.env.INTERNAL_IDP_URL;
     const idpUrl = process.env.IDP_URL;
     const clientIdStr = process.env.CLIENT_ID || process.env.NEXT_PUBLIC_CLIENT_ID;
 
-    if (!idpUrl) {
-        throw new Error('[IDP_CONFIG] FATAL: IDP_URL must be set');
-    }
     if (!clientIdStr) {
         throw new Error('[IDP_CONFIG] FATAL: CLIENT_ID or NEXT_PUBLIC_CLIENT_ID must be set');
     }
-    if (!process.env.PAYEZ_CLIENT_SECRET) {
-        throw new Error('[IDP_CONFIG] FATAL: PAYEZ_CLIENT_SECRET is required. Inject via container env or K8s Secret — never .env files.');
+    if (!internalIdpUrl && !idpUrl) {
+        throw new Error('[IDP_CONFIG] FATAL: INTERNAL_IDP_URL or IDP_URL must be set');
     }
 
     // Start fetch and store promise so concurrent callers wait for same result
-    pendingFetch = fetchConfigFromIDP(idpUrl, clientIdStr)
+    const fetcher = internalIdpUrl
+        ? fetchConfigFromInternalIDP(internalIdpUrl, clientIdStr)
+        : fetchConfigFromIDP(idpUrl!, clientIdStr);
+    pendingFetch = fetcher
         .then(async config => {
             // Cache with TTL from response (default 5 minutes)
             cachedConfig = config;
@@ -253,6 +254,84 @@ export function getEnabledProviders(config: IDPClientConfig): OAuthProviderConfi
 // Internal Functions
 // ============================================================================
 
+async function fetchConfigFromInternalIDP(internalIdpUrl: string, clientIdStr: string): Promise<IDPClientConfig> {
+    const containersKey = process.env.CONTAINERS_KEY;
+    if (!containersKey) {
+        throw new Error('[IDP_CONFIG] FATAL: CONTAINERS_KEY is required when using INTERNAL_IDP_URL');
+    }
+
+    const url = `${internalIdpUrl.replace(/\/$/, '')}/InternalClientConfig/${encodeURIComponent(clientIdStr)}`;
+    console.log(`[IDP_CONFIG] Fetching config from internal IDP: ${url}`);
+
+    const resp = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': `Secret ${containersKey}`,
+        },
+        cache: 'no-store'
+    } as RequestInit);
+
+    if (!resp.ok) {
+        const txt = await resp.text().catch(() => 'Unknown error');
+        throw new Error(`[IDP_CONFIG] FATAL: Internal IDP returned ${resp.status} - ${txt}`);
+    }
+
+    const body: any = await resp.json().catch(() => null);
+    if (!body) {
+        throw new Error('[IDP_CONFIG] FATAL: Internal IDP returned empty or invalid JSON');
+    }
+
+    const configData = body?.data ?? body;
+
+    const rawClientId = configData.clientId ?? configData.client_id;
+    if (rawClientId === undefined || rawClientId === null) {
+        throw new Error(`[IDP_CONFIG] FATAL: Internal IDP response missing clientId. Got: ${JSON.stringify(Object.keys(configData))}`);
+    }
+
+    const config: IDPClientConfig = {
+        clientId: String(rawClientId),
+        clientSlug: configData.clientSlug ?? configData.client_slug ?? configData.slug ?? '',
+        nextAuthSecret: configData.nextAuthSecret ?? configData.next_auth_secret ?? '',
+        configCacheTtlSeconds: configData.configCacheTtlSeconds ?? configData.config_cache_ttl_seconds ?? 300,
+        oauthProviders: (configData.oauthProviders ?? configData.oauth_providers ?? []).map((p: any) => ({
+            provider: p.provider ?? '',
+            enabled: p.enabled ?? false,
+            clientId: p.clientId ?? p.client_id ?? '',
+            clientSecret: p.clientSecret ?? p.client_secret ?? '',
+            scopes: p.scopes,
+            additionalParams: p.additionalParams ?? p.additional_params
+        })),
+        authSettings: {
+            require2FA: configData.authSettings?.require2FA ?? configData.auth_settings?.require_2fa ?? true,
+            allowed2FAMethods: configData.authSettings?.allowed2FAMethods ?? configData.auth_settings?.allowed_2fa_methods ?? ['email', 'sms'],
+            mfaGracePeriodHours: configData.authSettings?.mfaGracePeriodHours ?? configData.auth_settings?.mfa_grace_period_hours ?? 24,
+            mfaRememberDeviceDays: configData.authSettings?.mfaRememberDeviceDays ?? configData.auth_settings?.mfa_remember_device_days ?? 30,
+            sessionTimeoutMinutes: configData.authSettings?.sessionTimeoutMinutes ?? configData.auth_settings?.session_timeout_minutes ?? 60,
+            idleTimeoutMinutes: configData.authSettings?.idleTimeoutMinutes ?? configData.auth_settings?.idle_timeout_minutes ?? 15,
+            allowRememberMe: configData.authSettings?.allowRememberMe ?? configData.auth_settings?.allow_remember_me ?? true,
+            rememberMeDays: configData.authSettings?.rememberMeDays ?? configData.auth_settings?.remember_me_days ?? 30,
+            lockoutThreshold: configData.authSettings?.lockoutThreshold ?? configData.auth_settings?.lockout_threshold ?? 5,
+            lockoutDurationMinutes: configData.authSettings?.lockoutDurationMinutes ?? configData.auth_settings?.lockout_duration_minutes ?? 15
+        },
+        branding: {
+            theme: configData.branding?.theme,
+            primaryColor: configData.branding?.primaryColor ?? configData.branding?.primary_color,
+            secondaryColor: configData.branding?.secondaryColor ?? configData.branding?.secondary_color,
+            logoUrl: configData.branding?.logoUrl ?? configData.branding?.logo_url
+        },
+        baseClientUrl: configData.baseClientUrl ?? configData.base_client_url ?? configData.BaseClientUrl
+    };
+
+    if (!config.nextAuthSecret) {
+        throw new Error('[IDP_CONFIG] FATAL: Internal IDP did not return nextAuthSecret');
+    }
+
+    console.log(`[IDP_CONFIG] Internal IDP config loaded for ${clientIdStr}`);
+    consecutiveFailures = 0;
+    return config;
+}
+
 async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<IDPClientConfig> {
     // =========================================================================
     // Circuit Breaker Check
@@ -295,7 +374,6 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
         subject: clientIdStr,
         audience: 'urn:payez:externalauth:clientconfig',
         expires_in: 60,
-        client_secret: process.env.PAYEZ_CLIENT_SECRET,
     };
 
     const signingResp = await fetch(signingUrl, {
