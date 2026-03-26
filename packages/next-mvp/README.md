@@ -123,21 +123,21 @@ Create `.env.local` (or `.env.development`) in your project root:
 ```bash
 # PayEz IDP Configuration (required)
 CLIENT_ID=your_client_slug_from_payez    # e.g., "payez_idp_admin_web"
-IDP_URL=https://idp.payez.net            # or http://localhost:32785 for local dev
+IDP_URL=http://10.0.0.93:32785           # Dev server IDP
+PAYEZ_CLIENT_SECRET=your_client_secret   # Required for dev broker auth
 
 # NextAuth trusts request headers for OAuth callback URLs
 AUTH_TRUST_HOST=true
 
-# NEXTAUTH_SECRET - DO NOT SET!
-# The MVP broker fetches this securely from IDP at startup.
-# Only set manually if you need to override the IDP-provided secret.
+# NEXTAUTH_SECRET — DO NOT SET!
+# Resolved automatically at startup. See "Authentication & Secret Sourcing" below.
 
 # Optional
 REDIS_URL=redis://localhost:6379         # For session storage
 NEXT_PUBLIC_IDP_BASE_URL=https://idp.payez.net  # For client-side redirects
 ```
 
-> **Note:** `NEXTAUTH_SECRET` is intentionally omitted. The MVP automatically fetches it from the IDP at startup using the broker pattern. See [Environment Variables Reference](#environment-variables-reference) for details.
+> **Note:** `NEXTAUTH_SECRET` is resolved automatically at startup — do not set it manually. `PAYEZ_CLIENT_SECRET` is required for dev environments. Production uses a cluster-internal endpoint instead. See [Authentication & Secret Sourcing](#authentication--secret-sourcing) for details.
 
 ### 3. Create NextAuth API Route
 
@@ -444,44 +444,75 @@ import { POST as logout } from '@payez/next-mvp/routes/auth/logout';
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CLIENT_ID` | ✅ Yes | Your PayEz IDP client ID (string slug, e.g., `payez_idp_admin_web`) |
-| `IDP_URL` | ✅ Yes | PayEz IDP base URL (e.g., `https://idp.payez.net` or `http://localhost:32785`) |
-| `AUTH_TRUST_HOST` | ✅ Yes | Must be `true` - NextAuth derives OAuth URLs from request headers |
-| `NEXTAUTH_SECRET` | 🔄 Broker | **Do NOT set** - fetched automatically from IDP at startup (see below) |
-| `CLIENT_SECRET` | ⚠️ Legacy | Not needed with broker mode - IDP handles signing |
+| `IDP_URL` | ✅ Yes | PayEz IDP base URL |
+| `AUTH_TRUST_HOST` | ✅ Yes | Must be `true` — NextAuth derives OAuth URLs from request headers |
+| `PAYEZ_CLIENT_SECRET` | ✅ Dev | Client secret for IDP broker authentication (dev environments only) |
+| `NEXTAUTH_SECRET` | 🔄 Auto | **Do NOT set** — resolved automatically at startup (see below) |
 | `NEXT_PUBLIC_IDP_BASE_URL` | ⚠️ Optional | Public-facing IDP URL (for client-side redirects) |
 | `REDIS_URL` | ⚠️ Optional | Redis connection string for session storage |
 
-### NEXTAUTH_SECRET Broker Flow
+### Authentication & Secret Sourcing
 
-**The MVP uses a "broker" pattern for NEXTAUTH_SECRET** - the IDP securely provides it at startup rather than storing it in env files.
+The MVP resolves `NEXTAUTH_SECRET` and full OAuth configuration automatically at startup. **The method differs between dev and production.**
+
+#### Dev (private network)
+
+The app calls the IDP broker on the private network to fetch secrets:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  App Startup (instrumentation.ts → ensureInitialized)       │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Is NEXTAUTH_SECRET set and non-empty?                      │
-└─────────────────────────────────────────────────────────────┘
-            │                              │
-          YES                             NO (recommended)
-            │                              │
-            ▼                              ▼
-   ┌─────────────┐         ┌─────────────────────────────────┐
-   │ Use as-is   │         │ Fetch from IDP (Broker Mode)    │
-   │ (override)  │         │   1. Sign client assertion      │
-   │             │         │   2. POST to /next-auth/secret  │
-   │             │         │   3. Set process.env at runtime │
-   └─────────────┘         └─────────────────────────────────┘
+Next.js app
+  → POST /api/ExternalAuth/sign-client-assertion (with PAYEZ_CLIENT_SECRET)
+  → POST /api/ExternalAuth/client-config (with signed assertion)
+  ← Returns: NextAuth secret, OAuth providers, auth settings, branding
 ```
 
-**Key points:**
-- **Do NOT set `NEXTAUTH_SECRET` in `.env` files** - leave it undefined
-- The IDP provides the secret securely at startup via client assertion
-- Secret is cached for 5 minutes, then re-fetched if needed
-- If you DO set it manually, that value takes precedence (useful for overrides)
-- The broker needs `CLIENT_ID` and `IDP_URL` to fetch the secret
+```bash
+# Dev .env.local
+CLIENT_ID=your_client_slug
+IDP_URL=http://10.0.0.93:32785          # Private network, not public
+PAYEZ_CLIENT_SECRET=your_client_secret   # Required for broker auth in dev
+AUTH_TRUST_HOST=true
+```
+
+The broker endpoint is on the private network (10.0.0.93). Not exposed to the internet.
+
+#### Production (AKS)
+
+The app calls a **cluster-internal endpoint** — no client secret needed. Network boundary is the auth.
+
+```
+Next.js pod (external-services namespace)
+  → Internal endpoint on Enc API or Internal IDP (internal-services namespace)
+  ← Returns: NextAuth secret, OAuth config
+```
+
+```bash
+# Prod — set via K8s configmap or Secret
+CLIENT_ID=your_client_slug
+IDP_URL=https://idp.payez.net
+AUTH_TRUST_HOST=true
+# PAYEZ_CLIENT_SECRET is NOT needed in production
+# The cluster-internal endpoint authenticates by network boundary
+```
+
+The internal endpoint is only reachable within the AKS cluster. If you can reach it, you are a pod in the cluster.
+
+#### Why two methods?
+
+| | Dev | Production |
+|-|-----|-----------|
+| **Network** | Private LAN (10.0.0.x) | AKS cluster-internal DNS |
+| **Auth model** | Client secret (PAYEZ_CLIENT_SECRET) | Network boundary (cluster-internal only) |
+| **Endpoint** | External IDP broker (32785) | Internal endpoint (cluster-internal) |
+| **Secret in env?** | Yes (PAYEZ_CLIENT_SECRET) | No |
+
+Dev uses a client secret because the dev network has multiple machines and services — the secret proves the caller is authorized. Production uses network boundary because the AKS cluster is a trust boundary — only pods in the cluster can reach internal services.
+
+#### If NEXTAUTH_SECRET is missing at runtime
+
+The app throws a **FATAL** error and exits. This is intentional — running without a valid secret means sessions cannot be signed and auth is broken. Check:
+1. Dev: Is `PAYEZ_CLIENT_SECRET` set? Is `IDP_URL` reachable?
+2. Prod: Is the internal endpoint deployed? Can the pod reach it?
 
 ---
 
