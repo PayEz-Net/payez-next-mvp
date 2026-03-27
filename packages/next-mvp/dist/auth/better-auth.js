@@ -69,10 +69,10 @@ function createBetterAuthInstance(idpConfig) {
     });
 }
 /**
- * Check if Better Auth is enabled via flag.
+ * Better Auth is always enabled (NextAuth removed in 4.0).
  */
 function isBetterAuthEnabled() {
-    return process.env.USE_BETTER_AUTH === 'true';
+    return true;
 }
 /**
  * Get Better Auth Next.js route handlers (GET, POST).

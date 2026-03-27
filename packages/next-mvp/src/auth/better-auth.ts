@@ -84,10 +84,10 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
 }
 
 /**
- * Check if Better Auth is enabled via flag.
+ * Better Auth is always enabled (NextAuth removed in 4.0).
  */
 export function isBetterAuthEnabled(): boolean {
-  return process.env.USE_BETTER_AUTH === 'true';
+  return true;
 }
 
 /**
