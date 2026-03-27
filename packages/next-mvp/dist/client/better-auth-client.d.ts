@@ -4,11 +4,8 @@
  * Drop-in replacement for next-auth/react hooks and functions.
  * Import from '@payez/next-mvp/client/better-auth-client'.
  *
- * Migration map:
- *   useSession()        → authClient.useSession()
- *   signIn('google')    → authClient.signIn.social({ provider: 'google' })
- *   signIn('credentials', {...}) → authClient.signIn.email({...})
- *   signOut()           → authClient.signOut()
+ * Includes useSessionCompat() — returns NextAuth-shaped { data, status }
+ * so existing components don't need destructure pattern changes.
  */
 export declare const authClient: {
     signIn: {
@@ -959,3 +956,65 @@ export declare const useSession: () => {
     code?: string | undefined;
     message?: string | undefined;
 }, FetchOptions["throw"] extends true ? true : false>>;
+/**
+ * NextAuth-compatible useSession wrapper.
+ *
+ * Maps Better Auth's { data, error, isPending } to NextAuth's { data, status, update }.
+ * Drop-in replacement — no destructure changes needed in consuming components.
+ */
+export declare function useSessionCompat(): {
+    data: {
+        user: import("better-auth/react").StripEmptyObjects<{
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            email: string;
+            emailVerified: boolean;
+            name: string;
+            image?: string | null | undefined;
+        }>;
+        expires: string;
+        session: import("better-auth/react").StripEmptyObjects<{
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            userId: string;
+            expiresAt: Date;
+            token: string;
+            ipAddress?: string | null | undefined;
+            userAgent?: string | null | undefined;
+        }>;
+    } | null;
+    status: "loading" | "authenticated" | "unauthenticated";
+    update: () => Promise<{
+        user: import("better-auth/react").StripEmptyObjects<{
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            email: string;
+            emailVerified: boolean;
+            name: string;
+            image?: string | null | undefined;
+        }>;
+        expires: string;
+        session: import("better-auth/react").StripEmptyObjects<{
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            userId: string;
+            expiresAt: Date;
+            token: string;
+            ipAddress?: string | null | undefined;
+            userAgent?: string | null | undefined;
+        }>;
+    } | null>;
+};
+/**
+ * NextAuth-compatible signOut wrapper.
+ *
+ * Maps NextAuth signOut({ redirect, callbackUrl }) to Better Auth.
+ */
+export declare function signOutCompat(options?: {
+    redirect?: boolean;
+    callbackUrl?: string;
+}): Promise<void>;
