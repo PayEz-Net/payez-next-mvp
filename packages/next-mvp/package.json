@@ -1,6 +1,6 @@
 {
   "name": "@payez/next-mvp",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -46,11 +46,6 @@
       "types": "./dist/types/auth.d.ts",
       "require": "./dist/types/auth.js",
       "default": "./dist/types/auth.js"
-    },
-    "./auth/auth-options": {
-      "types": "./dist/auth/auth-options.d.ts",
-      "require": "./dist/auth/auth-options.js",
-      "default": "./dist/auth/auth-options.js"
     },
     "./auth/better-auth": {
       "types": "./dist/auth/better-auth.d.ts",
@@ -152,11 +147,6 @@
       "require": "./dist/lib/jwt-decode.js",
       "default": "./dist/lib/jwt-decode.js"
     },
-    "./lib/nextauth-secret": {
-      "types": "./dist/lib/nextauth-secret.d.ts",
-      "require": "./dist/lib/nextauth-secret.js",
-      "default": "./dist/lib/nextauth-secret.js"
-    },
     "./lib/api-handler": {
       "types": "./dist/lib/api-handler.d.ts",
       "require": "./dist/lib/api-handler.js",
@@ -231,11 +221,6 @@
       "types": "./lib/jwt-decode.d.ts",
       "require": "./dist/lib/jwt-decode.js",
       "default": "./lib/jwt-decode.js"
-    },
-    "./dist/lib/nextauth-secret": {
-      "types": "./lib/nextauth-secret.d.ts",
-      "require": "./dist/lib/nextauth-secret.js",
-      "default": "./lib/nextauth-secret.js"
     },
     "./dist/lib/token-expiry": {
       "types": "./lib/token-expiry.d.ts",
@@ -836,6 +821,11 @@
       "types": "./dist/pages/coming-soon/page.d.ts",
       "require": "./dist/pages/coming-soon/page.js",
       "default": "./dist/pages/coming-soon/page.js"
+    },
+    "./server/auth": {
+      "types": "./dist/server/auth.d.ts",
+      "require": "./dist/server/auth.js",
+      "default": "./dist/server/auth.js"
     },
     "./server/auth-guard": {
       "types": "./dist/server/auth-guard.d.ts",
