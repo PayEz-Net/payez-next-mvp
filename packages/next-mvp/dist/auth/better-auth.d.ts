@@ -1,0 +1,79 @@
+/**
+ * Better Auth Configuration
+ *
+ * Primary auth configuration. Replaces the former NextAuth auth-options.ts.
+ *
+ * Architecture: No database adapter — Better Auth runs in stateless mode
+ * with JWE cookie cache. User management stays on IDP, sessions on Redis.
+ *
+ * @see BETTER-AUTH-MIGRATION-SPEC.md
+ */
+import 'server-only';
+import type { IDPClientConfig } from '../lib/idp-client-config';
+/**
+ * Better Auth social provider config shape.
+ */
+export interface BetterAuthSocialProvider {
+    clientId: string;
+    clientSecret: string;
+    scope?: string[];
+}
+/**
+ * Build Better Auth social providers from IDP config.
+ */
+export declare function buildBetterAuthProviders(config: IDPClientConfig): Record<string, BetterAuthSocialProvider>;
+/**
+ * Create Better Auth instance from IDP config.
+ *
+ * No database — runs in stateless mode with JWE cookie cache.
+ * Call after getIDPClientConfig() resolves.
+ */
+export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): import("better-auth").Auth<{
+    secret: string;
+    socialProviders: Record<string, BetterAuthSocialProvider>;
+    trustedOrigins: string[];
+    session: {
+        cookieCache: {
+            enabled: true;
+            maxAge: number;
+            refreshCache: true;
+        };
+    };
+    plugins: [{
+        id: "next-cookies";
+        hooks: {
+            before: {
+                matcher(ctx: import("better-auth").HookEndpointContext): boolean;
+                handler: (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>;
+            }[];
+            after: {
+                matcher(ctx: import("better-auth").HookEndpointContext): true;
+                handler: (inputContext: import("better-auth").MiddlewareInputContext<import("better-auth").MiddlewareOptions>) => Promise<void>;
+            }[];
+        };
+    }];
+}>;
+/**
+ * Check if Better Auth is enabled via flag.
+ */
+export declare function isBetterAuthEnabled(): boolean;
+/**
+ * Get flag-gated auth handler for Next.js route.
+ *
+ * When USE_BETTER_AUTH=true, returns Better Auth handlers.
+ * Otherwise returns null (auth disabled).
+ *
+ * Usage in host app route:
+ * ```ts
+ * import { getBetterAuthHandler } from '@payez/next-mvp/auth/better-auth';
+ *
+ * export async function GET(req: Request) {
+ *   const ba = await getBetterAuthHandler();
+ *   if (ba) return ba.GET(req);
+ * }
+ * ```
+ */
+export declare function getBetterAuthHandler(): Promise<{
+    GET: (req: Request) => Promise<Response>;
+    POST: (req: Request) => Promise<Response>;
+} | null>;

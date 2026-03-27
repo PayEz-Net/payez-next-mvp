@@ -1,0 +1,257 @@
+"use strict";
+/**
+ * Startup Initialization for MVP
+ *
+ * This module ensures that critical initialization tasks are completed
+ * before the application serves requests.
+ *
+ * Now uses unified IDP client config for:
+ * - NEXTAUTH_SECRET
+ * - OAuth provider configuration
+ * - Auth settings (2FA, session timeouts, etc.)
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ensureInitialized = ensureInitialized;
+exports.logStartupStatus = logStartupStatus;
+exports.getStartupIDPConfig = getStartupIDPConfig;
+exports.isInitializationFailed = isInitializationFailed;
+exports.getInitializationError = getInitializationError;
+exports.isAppReady = isAppReady;
+require("server-only");
+const idp_client_config_1 = require("./idp-client-config");
+let initializationStarted = false;
+let initializationComplete = false;
+let initializationFailed = false;
+let initializationPromise = null;
+let lastInitError = null;
+// Cached IDP config for access after initialization
+let cachedIDPConfig = null;
+// Startup backoff to prevent pod restart storms from hammering IDP
+let lastStartupAttemptTime = 0;
+const STARTUP_BACKOFF_MS = 30000; // 30 seconds between startup attempts after failure
+/**
+ * Initialize the application startup sequence (async)
+ * Handles async initialization like fetching secrets from IDP
+ */
+async function ensureInitialized() {
+    // If already initialized, return immediately
+    if (initializationComplete) {
+        return;
+    }
+    // If initialization is in progress, wait for it
+    if (initializationPromise) {
+        return initializationPromise;
+    }
+    // Prevent hammering IDP on rapid pod restarts
+    const now = Date.now();
+    if (initializationFailed && (now - lastStartupAttemptTime) < STARTUP_BACKOFF_MS) {
+        const remainingMs = STARTUP_BACKOFF_MS - (now - lastStartupAttemptTime);
+        console.warn('[STARTUP] In backoff period after previous failure, skipping IDP call', {
+            remainingMs: Math.round(remainingMs),
+            lastError: lastInitError?.message
+        });
+        // Re-throw last error so callers know we're still in failed state
+        throw lastInitError || new Error('Initialization in backoff period');
+    }
+    // Track this attempt time
+    lastStartupAttemptTime = now;
+    // Mark as started
+    initializationStarted = true;
+    // Start initialization
+    initializationPromise = performInitialization();
+    await initializationPromise;
+}
+/**
+ * Synchronously log startup status
+ * Can be called before async initialization is complete
+ */
+function logStartupStatus() {
+    if (!initializationStarted) {
+        console.log('\n');
+        console.log('╔══════════════════════════════════════════════════════════════╗');
+        console.log('║            🚀 PayEz Next MVP - Starting Up                    ║');
+        console.log('║                                                              ║');
+        console.log('║  Async initialization in progress...                         ║');
+        console.log('║  - Resolving NEXTAUTH_SECRET from IDP                       ║');
+        console.log('║  - Verifying environment configuration                       ║');
+        console.log('║                                                              ║');
+        console.log('║  Check logs below for detailed initialization status:        ║');
+        console.log('╚══════════════════════════════════════════════════════════════╝');
+        console.log('');
+    }
+    else if (initializationComplete) {
+        console.log('\n');
+        console.log('╔══════════════════════════════════════════════════════════════╗');
+        console.log('║            ✨ PayEz Next MVP Ready for Requests ✨            ║');
+        console.log('╚══════════════════════════════════════════════════════════════╝');
+        console.log('');
+    }
+    else if (lastInitError) {
+        console.log('\n');
+        console.log('╔══════════════════════════════════════════════════════════════╗');
+        console.log('║  ⚠️  Startup error detected - initialization may still retry  ║');
+        console.log('╚══════════════════════════════════════════════════════════════╝');
+        console.log('');
+    }
+}
+async function performInitialization() {
+    console.log('\n');
+    console.log('╔══════════════════════════════════════════════════════════════╗');
+    console.log('║            PayEz Next MVP - Async Startup                     ║');
+    console.log('╚══════════════════════════════════════════════════════════════╝');
+    console.log('');
+    try {
+        // Step 1: Fetch full client config from IDP (includes secret, providers, settings)
+        console.log('[STARTUP] Step 1/2: Fetching client config from IDP...');
+        try {
+            const config = await (0, idp_client_config_1.getIDPClientConfig)(true);
+            cachedIDPConfig = config;
+            console.log('[STARTUP] Client config loaded successfully');
+            console.log('[STARTUP]    - Client ID:', config.clientId);
+            console.log('[STARTUP]    - Client Slug:', config.clientSlug);
+            console.log('[STARTUP]    - Secret length:', config.nextAuthSecret?.length || 0, 'chars');
+            console.log('[STARTUP]    - OAuth Providers:', config.oauthProviders?.filter(p => p.enabled).map(p => p.provider).join(', ') || 'none');
+            console.log('[STARTUP]    - Require 2FA:', config.authSettings?.require2FA);
+            console.log('[STARTUP]    - Cache TTL:', config.configCacheTtlSeconds, 'seconds');
+            console.log('[STARTUP]    - Base Client URL:', config.baseClientUrl || '(not set)');
+            // Set NEXTAUTH_SECRET from IDP response if not already set
+            if (config.nextAuthSecret && !process.env.NEXTAUTH_SECRET) {
+                process.env.NEXTAUTH_SECRET = config.nextAuthSecret;
+                console.log('[STARTUP] Set NEXTAUTH_SECRET from IDP config');
+            }
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            console.error('[STARTUP] IDP config fetch failed:', errorMsg);
+            // No fallback available — IDP config is the only source for the auth secret
+            console.error('[STARTUP] No fallback available for auth secret resolution');
+        }
+        // Step 2: Verify NEXTAUTH_SECRET is available - FAIL FAST if not
+        console.log('[STARTUP] Step 2/2: Verifying NEXTAUTH_SECRET...');
+        const secret = process.env.NEXTAUTH_SECRET;
+        if (!secret || secret.trim() === '') {
+            console.error('');
+            console.error('╔══════════════════════════════════════════════════════════════╗');
+            console.error('║   ❌ FATAL: NEXTAUTH_SECRET NOT AVAILABLE                     ║');
+            console.error('║                                                              ║');
+            console.error('║   The app cannot start without a valid NEXTAUTH_SECRET.      ║');
+            console.error('║   This should be fetched from IDP at startup.                ║');
+            console.error('║                                                              ║');
+            console.error('║   Possible causes:                                           ║');
+            console.error('║   • IDP is not running or unreachable                        ║');
+            console.error('║   • CLIENT_ID is not registered in IDP                       ║');
+            console.error('║   • IDP_URL is incorrect                                     ║');
+            console.error('║   • Network connectivity issue                               ║');
+            console.error('╚══════════════════════════════════════════════════════════════╝');
+            console.error('');
+            throw new Error('FATAL: NEXTAUTH_SECRET not available - cannot start without valid secret from IDP');
+        }
+        console.log('[STARTUP] NEXTAUTH_SECRET verified (' + secret.length + ' chars)');
+        // Step 3: Validate cookie name consistency
+        // This catches bugs where getJwtCookieName() returns a different name than
+        // what auth-options.ts configures, which causes sessions to fail in production
+        const { validateCookieNameConsistency, getSessionCookieName } = await Promise.resolve().then(() => __importStar(require('./app-slug')));
+        validateCookieNameConsistency();
+        console.log('[STARTUP] Cookie name consistency validated:', getSessionCookieName());
+        // All done
+        console.log('');
+        console.log('╔══════════════════════════════════════════════════════════════╗');
+        console.log('║            PayEz Next MVP Ready for Requests                  ║');
+        console.log('╚══════════════════════════════════════════════════════════════╝');
+        console.log('');
+        initializationComplete = true;
+        initializationFailed = false;
+        lastInitError = null;
+    }
+    catch (error) {
+        lastInitError = error instanceof Error ? error : new Error(String(error));
+        initializationFailed = true;
+        const errorMsg = lastInitError.message || 'Unknown error';
+        const isConnectionError = errorMsg.includes('fetch failed') || errorMsg.includes('ECONNREFUSED');
+        const idpUrl = (process.env.IDP_URL || 'NOT SET').padEnd(46);
+        const clientId = (process.env.CLIENT_ID || 'NOT SET').padEnd(43);
+        const connectionLine = isConnectionError
+            ? '║   🔌 CONNECTION REFUSED - IDP appears to be down             ║\n║                                                              ║\n'
+            : '';
+        console.error(`
+╔══════════════════════════════════════════════════════════════╗
+║   ❌ FATAL: NEXTAUTH_SECRET NOT AVAILABLE                     ║
+║                                                              ║
+║   The app cannot start without a valid NEXTAUTH_SECRET.      ║
+║   This should be fetched from IDP at startup.                ║
+║                                                              ║
+${connectionLine}║   Possible causes:                                           ║
+║   • IDP is not running or unreachable                        ║
+║   • CLIENT_ID is not registered in IDP                       ║
+║   • IDP_URL is incorrect                                     ║
+║   • Network connectivity issue                               ║
+║                                                              ║
+║   Current config:                                            ║
+║   • IDP_URL: ${idpUrl}║
+║   • CLIENT_ID: ${clientId}║
+╚══════════════════════════════════════════════════════════════╝
+
+[STARTUP] Error: ${errorMsg}
+`);
+        // Re-throw so callers know initialization failed
+        throw lastInitError;
+    }
+}
+/**
+ * Get the cached IDP config after initialization.
+ * Returns null if not yet initialized.
+ */
+function getStartupIDPConfig() {
+    return cachedIDPConfig;
+}
+/**
+ * Check if initialization failed (NEXTAUTH_SECRET couldn't be retrieved)
+ */
+function isInitializationFailed() {
+    return initializationFailed;
+}
+/**
+ * Get the last initialization error
+ */
+function getInitializationError() {
+    return lastInitError;
+}
+/**
+ * Check if the app is ready to handle auth requests
+ */
+function isAppReady() {
+    return initializationComplete && !initializationFailed;
+}
