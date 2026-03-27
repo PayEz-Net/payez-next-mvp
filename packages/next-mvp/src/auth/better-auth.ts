@@ -13,7 +13,9 @@
 import 'server-only';
 import { betterAuth } from 'better-auth';
 import { nextCookies } from 'better-auth/next-js';
+import { toNextJsHandler } from 'better-auth/next-js';
 import type { IDPClientConfig } from '../lib/idp-client-config';
+import { getIDPClientConfig } from '../lib/idp-client-config';
 
 /**
  * Better Auth social provider config shape.
@@ -54,7 +56,7 @@ export function buildBetterAuthProviders(
  */
 export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
   return betterAuth({
-    secret: idpConfig.nextAuthSecret,
+    secret: idpConfig.nextAuthSecret as string,
 
     socialProviders: buildBetterAuthProviders(idpConfig),
 
@@ -72,4 +74,59 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
       nextCookies(),
     ],
   });
+}
+
+/**
+ * Check if Better Auth is enabled via flag.
+ */
+export function isBetterAuthEnabled(): boolean {
+  return process.env.USE_BETTER_AUTH === 'true';
+}
+
+/**
+ * Get Better Auth Next.js route handlers (GET, POST).
+ * Initializes Better Auth from IDP config on first call, caches the instance.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let cachedInstance: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let initPromise: Promise<any> | null = null;
+
+async function getBetterAuthInstance() {
+  if (cachedInstance) return cachedInstance;
+
+  if (!initPromise) {
+    initPromise = getIDPClientConfig().then(config => {
+      const instance = createBetterAuthInstance(config);
+      cachedInstance = instance;
+      console.log('[BETTER_AUTH] Instance created for', config.clientSlug || config.clientId);
+      return instance;
+    });
+  }
+
+  return initPromise;
+}
+
+/**
+ * Get flag-gated auth handler for Next.js route.
+ *
+ * When USE_BETTER_AUTH=true, returns Better Auth handlers.
+ * Otherwise returns null (caller uses NextAuth).
+ *
+ * Usage in host app route:
+ * ```ts
+ * import { getBetterAuthHandler } from '@payez/next-mvp/auth/better-auth';
+ *
+ * export async function GET(req: Request) {
+ *   const ba = await getBetterAuthHandler();
+ *   if (ba) return ba.GET(req);
+ *   // ... existing NextAuth handler
+ * }
+ * ```
+ */
+export async function getBetterAuthHandler(): Promise<{ GET: (req: Request) => Promise<Response>; POST: (req: Request) => Promise<Response> } | null> {
+  if (!isBetterAuthEnabled()) return null;
+
+  const auth = await getBetterAuthInstance();
+  return toNextJsHandler(auth);
 }

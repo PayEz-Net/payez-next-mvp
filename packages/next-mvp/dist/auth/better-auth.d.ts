@@ -54,3 +54,28 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
         };
     }];
 }>;
+/**
+ * Check if Better Auth is enabled via flag.
+ */
+export declare function isBetterAuthEnabled(): boolean;
+/**
+ * Get flag-gated auth handler for Next.js route.
+ *
+ * When USE_BETTER_AUTH=true, returns Better Auth handlers.
+ * Otherwise returns null (caller uses NextAuth).
+ *
+ * Usage in host app route:
+ * ```ts
+ * import { getBetterAuthHandler } from '@payez/next-mvp/auth/better-auth';
+ *
+ * export async function GET(req: Request) {
+ *   const ba = await getBetterAuthHandler();
+ *   if (ba) return ba.GET(req);
+ *   // ... existing NextAuth handler
+ * }
+ * ```
+ */
+export declare function getBetterAuthHandler(): Promise<{
+    GET: (req: Request) => Promise<Response>;
+    POST: (req: Request) => Promise<Response>;
+} | null>;
