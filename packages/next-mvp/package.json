@@ -47,6 +47,11 @@
       "require": "./dist/auth/auth-options.js",
       "default": "./dist/auth/auth-options.js"
     },
+    "./auth/better-auth": {
+      "types": "./dist/auth/better-auth.d.ts",
+      "require": "./dist/auth/better-auth.js",
+      "default": "./dist/auth/better-auth.js"
+    },
     "./components/auth/FederatedAuthSection": {
       "types": "./dist/components/auth/FederatedAuthSection.d.ts",
       "require": "./dist/components/auth/FederatedAuthSection.js",
