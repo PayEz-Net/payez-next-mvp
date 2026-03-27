@@ -7,12 +7,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserAvatarMenu = UserAvatarMenu;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 const navigation_1 = require("next/navigation");
 const image_1 = __importDefault(require("next/image"));
 const lucide_react_1 = require("lucide-react");
 function UserAvatarMenu({ basePath = '', showProfile = true, showSettings = true, showSecurity = true, customItems, onSignOut, }) {
-    const { data: session, status } = (0, react_2.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
     const router = (0, navigation_1.useRouter)();
     const [isOpen, setIsOpen] = (0, react_1.useState)(false);
     const menuRef = (0, react_1.useRef)(null);
@@ -65,7 +67,8 @@ function UserAvatarMenu({ basePath = '', showProfile = true, showSettings = true
         else {
             // Use NEXT_PUBLIC env var or default to root
             const logoutUrl = process.env.NEXT_PUBLIC_LOGOUT_REDIRECT_URL || '/';
-            await (0, react_2.signOut)({ callbackUrl: logoutUrl });
+            await better_auth_client_1.authClient.signOut();
+            window.location.href = logoutUrl;
         }
     };
     const handleItemClick = (item) => {

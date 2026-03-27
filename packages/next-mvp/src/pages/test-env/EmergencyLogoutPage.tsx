@@ -1,6 +1,6 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useState, useEffect } from 'react';
 
 /**
@@ -16,7 +16,8 @@ import { useState, useEffect } from 'react';
  * ```
  */
 export function EmergencyLogoutPage() {
-  const { status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const status = isPending ? 'loading' : sessionData ? 'authenticated' : 'unauthenticated';
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [logoutComplete, setLogoutComplete] = useState(false);
@@ -70,10 +71,10 @@ export function EmergencyLogoutPage() {
       sessionStorage.clear();
       addLog('sessionStorage cleared');
 
-      // Step 4: Call NextAuth signOut
-      addLog('Calling NextAuth signOut...');
-      await signOut({ redirect: false });
-      addLog('NextAuth signOut complete');
+      // Step 4: Call Better Auth signOut
+      addLog('Calling Better Auth signOut...');
+      await authClient.signOut();
+      addLog('Better Auth signOut complete');
 
       // Step 5: Clear any auth-related fetch cache
       addLog('Invalidating caches...');

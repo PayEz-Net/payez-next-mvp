@@ -8,9 +8,8 @@
  * ------
  * // In your app's API route (e.g., app/api/admin/vibe/data/[collection]/[table]/route.ts)
  * import { createGetTableDataHandler } from '@payez/next-mvp/api-handlers/admin';
- * import { getAuthOptions } from '@payez/next-mvp/auth/auth-options';
  *
- * export const GET = createGetTableDataHandler({ getAuthOptions });
+ * export const GET = createGetTableDataHandler({ ... });
  */
 export { createGetCollectionsHandler, createGetTablesHandler, createGetTableDataHandler, createGetRecordHandler, createUpdateRecordHandler, createDeleteRecordHandler, createQueryHandler, type AdminVibeHandlerConfig, } from './vibe-data';
 export { createSessionsHandler, type AdminSessionsHandlerConfig, } from './sessions';

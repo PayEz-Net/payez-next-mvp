@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 interface UpdateSessionConfig {
-    nextAuthSecret: string;
+    nextAuthSecret?: string;
 }
 /**
  * Creates an update-session handler for Next.js API routes

@@ -13,9 +13,8 @@
  * @since auth-ready-v2
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { JWT } from 'next-auth/jwt';
 export interface AuthContext {
-    token: JWT;
+    token: any;
     accessToken: string;
     userId: string;
     sessionToken: string;

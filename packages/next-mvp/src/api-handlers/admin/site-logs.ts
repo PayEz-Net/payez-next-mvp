@@ -13,14 +13,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getRedis } from '../../lib/redis';
 import { ADMIN_ROLES, hasAnyRole } from '../../lib/roles';
 const REDIS_SITE_LOG_KEY = 'vibe:site-logs:pending';
 const REDIS_LOG_TTL = 7 * 24 * 60 * 60; // 1 week
 
 export interface SiteLogsHandlerConfig {
-  getAuthOptions: () => Promise<any>;
   vibeApiUrl?: string;
   appSlug?: string;
   vibeClientId?: string;
@@ -29,9 +28,8 @@ export interface SiteLogsHandlerConfig {
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; userId?: number; accessToken?: string; clientId?: string; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; userId?: number; accessToken?: string; clientId?: string; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -78,7 +76,7 @@ function getVibeApiUrl(config: SiteLogsHandlerConfig): string {
 export function createSiteLogsHandler(config: SiteLogsHandlerConfig) {
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const { searchParams } = new URL(request.url);
@@ -127,7 +125,7 @@ export function createSiteLogsHandler(config: SiteLogsHandlerConfig) {
     },
 
     async POST(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       try {
@@ -211,7 +209,7 @@ export function createSiteLogsHandler(config: SiteLogsHandlerConfig) {
 export function createSiteLogsStatsHandler(config: SiteLogsHandlerConfig) {
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const { searchParams } = new URL(request.url);
@@ -261,7 +259,7 @@ export function createSiteLogsStatsHandler(config: SiteLogsHandlerConfig) {
 export function createSiteLogsDrainHandler(config: SiteLogsHandlerConfig) {
   return {
     async POST(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const { searchParams } = new URL(request.url);
@@ -310,7 +308,7 @@ export function createSiteLogsDrainHandler(config: SiteLogsHandlerConfig) {
 export function createSiteLogsQueueHandler(config: SiteLogsHandlerConfig) {
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       try {

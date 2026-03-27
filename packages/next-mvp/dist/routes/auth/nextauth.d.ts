@@ -1,19 +1,22 @@
 /**
- * Ready-to-Use NextAuth Route Handler
+ * Ready-to-Use Auth Route Handler (Better Auth)
  *
- * Provides a pre-configured NextAuth handler that uses dynamic OAuth providers
- * loaded from IDP at startup via getAuthOptions().
+ * Provides a pre-configured Better Auth handler that uses dynamic OAuth providers
+ * loaded from IDP at startup.
  *
- * @version 2.2.0 - Dynamic provider loading from IDP
- * @since auth-ready-v2-hotfix
+ * Replaces the former NextAuth handler. The file name is kept as nextauth.ts
+ * to avoid breaking re-exports in routes/auth/index.ts.
+ *
+ * @version 4.0.0 - Better Auth migration
+ * @since better-auth-4.0
  */
 /**
- * GET handler for NextAuth
- * Uses async factory to get dynamic providers from IDP
+ * GET handler for auth routes
+ * Delegates to Better Auth instance.
  */
-export declare function GET(request: Request, context: any): Promise<any>;
+export declare function GET(request: Request): Promise<Response>;
 /**
- * POST handler for NextAuth
- * Uses async factory to get dynamic providers from IDP
+ * POST handler for auth routes
+ * Delegates to Better Auth instance.
  */
-export declare function POST(request: Request, context: any): Promise<any>;
+export declare function POST(request: Request): Promise<Response>;

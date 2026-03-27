@@ -23,7 +23,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { signIn, useSession, getSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import ReservedStatusBox from '../../components/reserved/ReservedStatusBox';
@@ -35,7 +35,9 @@ function LoginForm() {
   const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
   const urlError = searchParams?.get('error');
 
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const branding = useBranding();
   const colors = useColors();
   const layout = useLayout();
@@ -128,40 +130,31 @@ function LoginForm() {
 
     try {
       console.log('[LOGIN] Starting authentication...');
-      const result = await signIn('credentials', {
+      const result = await authClient.signIn.email({
         email,
         password,
-        redirect: false,
-        callbackUrl,
+        callbackURL: callbackUrl,
       });
 
-      if (result?.error) {
-        console.log('[LOGIN] Authentication failed:', result.error);
+      if ((result as any)?.error) {
+        console.log('[LOGIN] Authentication failed:', (result as any).error);
 
         setIsSubmitting(false);
         setLoading(false);
         setLoginSuccess(false);
 
-        try {
-          const errorData = JSON.parse(result.error);
-          const passwordError = errorData.error?.details?.errors?.find((e: any) => e.field_name === 'password');
+        const errorMsg = typeof (result as any).error === 'object'
+          ? ((result as any).error as any).message || 'Authentication failed'
+          : String((result as any).error);
 
-          if (passwordError) {
-            // Show recovery options on ANY password error
-            console.log('[LOGIN] Password error detected - showing recovery options');
-            setShowRecoveryOptions(true);
-            setLoginError(passwordError.message);
-          } else {
-            setLoginError(result.error);
-          }
-        } catch {
-          if (result.error.includes('Unable to connect')) {
-            setLoginError('The authentication service is currently unavailable. Please try again later.');
-          } else if (result.error === 'CredentialsSignin') {
-            setLoginError('Invalid email or password. Please try again.');
-          } else {
-            setLoginError(result.error);
-          }
+        if (errorMsg.includes('password') || errorMsg.includes('Password')) {
+          console.log('[LOGIN] Password error detected - showing recovery options');
+          setShowRecoveryOptions(true);
+          setLoginError(errorMsg);
+        } else if (errorMsg.includes('Unable to connect')) {
+          setLoginError('The authentication service is currently unavailable. Please try again later.');
+        } else {
+          setLoginError(errorMsg);
         }
         return;
       }
@@ -173,7 +166,7 @@ function LoginForm() {
       setIsSubmitting(false);
 
       // Get updated session
-      const freshSession = await getSession();
+      const freshSession = await authClient.getSession();
       console.log('[LOGIN] Fresh session obtained, redirecting to 2FA...');
 
       // Redirect to verify-code for 2FA

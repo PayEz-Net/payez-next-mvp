@@ -15,7 +15,7 @@ exports.useAuth = useAuth;
  * ```typescript
  * // src/hooks/useAuth.ts (YOUR APP)
  * 'use client';
- * import { useSession } from 'next-auth/react';
+ * import { authClient } from '@payez/next-mvp/client/better-auth-client';
  * import { standardizedApi } from '@payez/next-mvp/lib/standardized-client-api';
  *
  * export function useAuth() {
@@ -26,22 +26,24 @@ exports.useAuth = useAuth;
  *
  * @see {@link https://github.com/payez/next-mvp/blob/main/docs/centralized-auth-api-pattern.md#why-local-hooks-for-auth Complete documentation}
  */
-const react_1 = require("next-auth/react");
-const react_2 = require("react");
+const better_auth_client_1 = require("../client/better-auth-client");
+const react_1 = require("react");
 const navigation_1 = require("next/navigation");
 const standardized_client_api_1 = require("../lib/standardized-client-api");
 function useAuth() {
-    const { data: session, status } = (0, react_1.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
     const router = (0, navigation_1.useRouter)();
     const isLoading = status === 'loading';
     const isAuthenticated = status === 'authenticated' && !!session?.accessToken;
     // Handle sign out with redirect
-    const handleSignOut = (0, react_2.useCallback)(async () => {
-        await (0, react_1.signOut)({ redirect: false });
+    const handleSignOut = (0, react_1.useCallback)(async () => {
+        await better_auth_client_1.authClient.signOut();
         router.push('/account-auth/login?error=SessionExpired');
     }, [router]);
     // API helper that automatically includes the auth token and uses standardized API
-    const apiCall = (0, react_2.useCallback)(async (url, method = 'GET', data) => {
+    const apiCall = (0, react_1.useCallback)(async (url, method = 'GET', data) => {
         if (!session?.accessToken) {
             console.error('[useAuth] No access token available');
             throw new Error('Not authenticated');

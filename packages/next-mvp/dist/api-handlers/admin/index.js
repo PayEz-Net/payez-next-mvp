@@ -9,9 +9,8 @@
  * ------
  * // In your app's API route (e.g., app/api/admin/vibe/data/[collection]/[table]/route.ts)
  * import { createGetTableDataHandler } from '@payez/next-mvp/api-handlers/admin';
- * import { getAuthOptions } from '@payez/next-mvp/auth/auth-options';
  *
- * export const GET = createGetTableDataHandler({ getAuthOptions });
+ * export const GET = createGetTableDataHandler({ ... });
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createStatsHandler = exports.createRedisSessionRevokeHandler = exports.createRedisSessionsHandler = exports.createSiteLogsQueueHandler = exports.createSiteLogsDrainHandler = exports.createSiteLogsStatsHandler = exports.createSiteLogsHandler = exports.createAnalyticsHandler = exports.createAuditHandler = exports.createUsersHandler = exports.createSessionsHandler = exports.createQueryHandler = exports.createDeleteRecordHandler = exports.createUpdateRecordHandler = exports.createGetRecordHandler = exports.createGetTableDataHandler = exports.createGetTablesHandler = exports.createGetCollectionsHandler = void 0;

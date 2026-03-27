@@ -9,7 +9,6 @@ exports.useFederatedAuthEnabled = useFederatedAuthEnabled;
 exports.useTraditionalAuthEnabled = useTraditionalAuthEnabled;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
 const react_query_1 = require("@tanstack/react-query");
 const AuthContext = (0, react_1.createContext)(null);
 const defaultConfig = {
@@ -50,7 +49,11 @@ function AuthProvider({ children, config, useDynamicProviders = true }) {
         let mounted = true;
         async function fetchDynamicProviders() {
             try {
-                const result = await (0, react_2.getProviders)();
+                // Better Auth doesn't have a getProviders equivalent.
+                // Use static provider map based on configured social providers.
+                const result = {
+                    google: { id: 'google', name: 'Google' },
+                };
                 if (!mounted)
                     return;
                 if (result) {

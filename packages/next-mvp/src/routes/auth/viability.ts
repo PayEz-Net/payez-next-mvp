@@ -15,19 +15,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { getSession } from '../../lib/session-store';
-import { getJwtCookieName } from '../../lib/app-slug';
+import { getSession as getBetterAuthSession } from '../../server/auth';
+import { getSession as getRedisSession } from '../../lib/session-store';
 import { getIDPClientConfig } from '../../lib/idp-client-config';
-
-/**
- * Get NextAuth secret from IDP config (cached).
- * NEVER use process.env.NEXTAUTH_SECRET at module level - it may not be set yet.
- */
-async function getNextAuthSecret(): Promise<string> {
-  const config = await getIDPClientConfig();
-  return config.nextAuthSecret || '';
-}
 
 /**
  * Get tenant-wide 2FA requirement from cached client config (from broker handshake)
@@ -52,11 +42,9 @@ async function getTenantRequiresTwoFactor(): Promise<boolean> {
  */
 export async function GET(req: NextRequest) {
   try {
-    const cookieName = getJwtCookieName();
-    const secret = await getNextAuthSecret();
-    const token = await getToken({ req, secret, cookieName });
+    const baSession = await getBetterAuthSession(req);
 
-    if (!token) {
+    if (!baSession) {
       return NextResponse.json({
         viable: false,
         needsRefresh: false,
@@ -65,9 +53,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-    const sessionToken = (token as any).sessionToken || (token as any).redisSessionId;
-    const session = sessionToken ? await getSession(sessionToken) : null;
+    const token = baSession as any;
+    const sessionToken = baSession.session?.token;
+    const session = sessionToken ? await getRedisSession(sessionToken) : null;
 
     // CRITICAL: Detect stale cookie state (JWT exists but Redis session missing)
     if (sessionToken && !session) {

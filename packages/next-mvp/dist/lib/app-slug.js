@@ -72,7 +72,7 @@ function getRefreshLockPrefix() {
 // ============================================================================
 //
 // CRITICAL: The session cookie name MUST be consistent between:
-//   1. auth-options.ts (where NextAuth SETS the cookie)
+//   1. better-auth.ts (where auth SETS the cookie)
 //   2. getToken() calls (where we READ the cookie)
 //
 // If these don't match, sessions will appear empty in one environment but
@@ -85,7 +85,7 @@ function getRefreshLockPrefix() {
  * THE session cookie name - SINGLE SOURCE OF TRUTH.
  *
  * This is used by:
- * - auth-options.ts (cookies.sessionToken.name)
+ * - better-auth.ts (cookies.sessionToken.name)
  * - getToken() calls (cookieName parameter)
  * - getJwtCookieName() (alias for consistency)
  *
@@ -97,21 +97,21 @@ function getSessionCookieName() {
 /**
  * Gets the JWT cookie name for getToken() calls.
  *
- * CRITICAL: This MUST match what auth-options.ts configures:
+ * CRITICAL: This MUST match what the auth config sets:
  * - Production: __Secure-{slug}.session-token
  * - Development: {slug}.session-token
  *
  * This is the cookie name that getToken() should use to READ the JWT.
  */
 function getJwtCookieName() {
-    // Must match auth-options.ts cookies.sessionToken.name logic
+    // Must match auth config cookies.sessionToken.name logic
     if (process.env.NODE_ENV === 'production') {
         return getSecureSessionCookieName();
     }
     return getSessionCookieName();
 }
 /**
- * Validates that cookie names are consistent with auth-options.ts.
+ * Validates that cookie names are consistent with the auth config.
  * Call this at startup to catch mismatches early.
  */
 function validateCookieNameConsistency() {
@@ -131,7 +131,7 @@ function validateCookieNameConsistency() {
  *
  * WARNING: This is ONLY for clearing cookies during logout.
  * DO NOT use this for reading cookies - use getSessionCookieName().
- * NextAuth does NOT automatically use this prefix.
+ * Auth does NOT automatically use this prefix.
  *
  * Format: __Secure-{slug}.session-token
  */

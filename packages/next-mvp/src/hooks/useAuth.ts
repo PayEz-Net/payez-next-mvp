@@ -13,7 +13,7 @@
  * ```typescript
  * // src/hooks/useAuth.ts (YOUR APP)
  * 'use client';
- * import { useSession } from 'next-auth/react';
+ * import { authClient } from '@payez/next-mvp/client/better-auth-client';
  * import { standardizedApi } from '@payez/next-mvp/lib/standardized-client-api';
  *
  * export function useAuth() {
@@ -25,7 +25,7 @@
  * @see {@link https://github.com/payez/next-mvp/blob/main/docs/centralized-auth-api-pattern.md#why-local-hooks-for-auth Complete documentation}
  */
 
-import { useSession, signOut } from 'next-auth/react';
+import { authClient } from '../client/better-auth-client';
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { standardizedApi, ApiResult } from '../lib/standardized-client-api';
@@ -56,22 +56,24 @@ export interface UseAuthResult {
 }
 
 export function useAuth(): UseAuthResult {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const router = useRouter();
 
   const isLoading = status === 'loading';
-  const isAuthenticated = status === 'authenticated' && !!session?.accessToken;
+  const isAuthenticated = status === 'authenticated' && !!(session as any)?.accessToken;
 
   // Handle sign out with redirect
   const handleSignOut = useCallback(async () => {
-    await signOut({ redirect: false });
+    await authClient.signOut();
     router.push('/account-auth/login?error=SessionExpired');
   }, [router]);
 
   // API helper that automatically includes the auth token and uses standardized API
   const apiCall = useCallback(
     async <T>(url: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', data?: any): Promise<ApiResult<T>> => {
-      if (!session?.accessToken) {
+      if (!(session as any)?.accessToken) {
         console.error('[useAuth] No access token available');
         throw new Error('Not authenticated');
       }
@@ -80,9 +82,9 @@ export function useAuth(): UseAuthResult {
         // Use standardized API which handles token refresh and validates response format
         switch (method) {
           case 'GET':
-            return await standardizedApi.get<T>(url, session.accessToken!);
+            return await standardizedApi.get<T>(url, (session as any).accessToken!);
           case 'POST':
-            return await standardizedApi.post<T>(url, data, session.accessToken!);
+            return await standardizedApi.post<T>(url, data, (session as any).accessToken!);
           case 'PUT':
             return await standardizedApi.put<T>(url, data);
           case 'DELETE':
@@ -102,7 +104,7 @@ export function useAuth(): UseAuthResult {
         throw error;
       }
     },
-    [session?.accessToken, handleSignOut]
+    [(session as any)?.accessToken, handleSignOut]
   );
 
   return {

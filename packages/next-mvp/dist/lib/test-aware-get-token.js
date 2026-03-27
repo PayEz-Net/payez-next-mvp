@@ -34,24 +34,19 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getTokenTestAware = getTokenTestAware;
-const jwt_1 = require("next-auth/jwt");
 const logger_1 = require("../config/logger");
-const nextauth_secret_1 = require("./nextauth-secret");
+const auth_1 = require("../server/auth");
 const app_slug_1 = require("./app-slug");
 async function getTokenTestAware(req) {
-    let secret = process.env.NEXTAUTH_SECRET;
-    if (!secret || secret.trim() === '') {
-        try {
-            secret = await (0, nextauth_secret_1.resolveNextAuthSecret)();
-        }
-        catch (e) {
-            logger_1.logger.error('[GET_TOKEN] Failed to resolve NEXTAUTH_SECRET', { error: e instanceof Error ? e.message : String(e) });
-            return null;
-        }
-    }
     if (process.env.TEST_MODE === 'true') {
         try {
-            // Use app-slug prefixed cookie name (must match auth-options.ts)
+            let secret = process.env.NEXTAUTH_SECRET;
+            if (!secret || secret.trim() === '') {
+                const { getIDPClientConfig } = await Promise.resolve().then(() => __importStar(require('./idp-client-config')));
+                const idpConfig = await getIDPClientConfig();
+                secret = idpConfig.nextAuthSecret;
+            }
+            // Use app-slug prefixed cookie name
             const cookieName = (0, app_slug_1.getSessionCookieName)();
             const cookies = req.headers.get('cookie');
             if (!cookies) {
@@ -74,8 +69,18 @@ async function getTokenTestAware(req) {
             return null;
         }
     }
-    // Use app-slug prefixed cookie name (must match auth-options.ts)
-    // In production, NextAuth uses __Secure- prefix for cookies
-    const cookieName = process.env.NODE_ENV === 'production' ? (0, app_slug_1.getSecureSessionCookieName)() : (0, app_slug_1.getSessionCookieName)();
-    return await (0, jwt_1.getToken)({ req, secret, cookieName });
+    // Production path: use Better Auth session
+    const session = await (0, auth_1.getSession)(req);
+    if (!session)
+        return null;
+    // Return a token-like object for backward compatibility with callers
+    // that access token.sub, token.email, token.sessionToken, token.roles, etc.
+    return {
+        sub: session.user?.id,
+        email: session.user?.email,
+        name: session.user?.name,
+        sessionToken: session.session?.token,
+        roles: session.user?.roles || [],
+        ...(session.user || {}),
+    };
 }

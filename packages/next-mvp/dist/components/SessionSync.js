@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SessionSync = SessionSync;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 const authStore_1 = require("../stores/authStore");
 const session_1 = require("../lib/session");
 const app_slug_1 = require("../lib/app-slug");
@@ -38,7 +38,9 @@ function sanitizeForLog(value, type) {
  * This ensures the app NEVER shows authenticated UI with empty/invalid session data.
  */
 function SessionSync({ children }) {
-    const { data: session, status } = (0, react_2.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
     const { setSession, clearSession } = (0, authStore_1.useAuthStore)();
     // Guard against duplicate sign-out calls
     const isSigningOutRef = (0, react_1.useRef)(false);
@@ -87,8 +89,8 @@ function SessionSync({ children }) {
             catch (e) {
                 // Cookie clearing failed - non-critical, continue with signout
             }
-            // Force NextAuth to sign out (this will clear cookies and trigger redirect)
-            (0, react_2.signOut)({ redirect: false })
+            // Force Better Auth to sign out (this will clear cookies and trigger redirect)
+            better_auth_client_1.authClient.signOut()
                 .then(() => {
                 if (isMounted) {
                     // Use generic error code instead of implementation details

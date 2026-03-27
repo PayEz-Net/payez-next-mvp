@@ -28,9 +28,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = LoginPage;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 const navigation_1 = require("next/navigation");
-const react_3 = require("react");
+const react_2 = require("react");
 const ReservedStatusBox_1 = __importDefault(require("../../components/reserved/ReservedStatusBox"));
 const ReservedRecoveryWarning_1 = __importDefault(require("../../components/reserved/ReservedRecoveryWarning"));
 const useTheme_1 = require("../../theme/useTheme");
@@ -38,7 +38,9 @@ function LoginForm() {
     const searchParams = (0, navigation_1.useSearchParams)();
     const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
     const urlError = searchParams?.get('error');
-    const { data: session, status } = (0, react_2.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
     const branding = (0, useTheme_1.useBranding)();
     const colors = (0, useTheme_1.useColors)();
     const layout = (0, useTheme_1.useLayout)();
@@ -122,40 +124,29 @@ function LoginForm() {
         setLoginSuccess(false);
         try {
             console.log('[LOGIN] Starting authentication...');
-            const result = await (0, react_2.signIn)('credentials', {
+            const result = await better_auth_client_1.authClient.signIn.email({
                 email,
                 password,
-                redirect: false,
-                callbackUrl,
+                callbackURL: callbackUrl,
             });
             if (result?.error) {
                 console.log('[LOGIN] Authentication failed:', result.error);
                 setIsSubmitting(false);
                 setLoading(false);
                 setLoginSuccess(false);
-                try {
-                    const errorData = JSON.parse(result.error);
-                    const passwordError = errorData.error?.details?.errors?.find((e) => e.field_name === 'password');
-                    if (passwordError) {
-                        // Show recovery options on ANY password error
-                        console.log('[LOGIN] Password error detected - showing recovery options');
-                        setShowRecoveryOptions(true);
-                        setLoginError(passwordError.message);
-                    }
-                    else {
-                        setLoginError(result.error);
-                    }
+                const errorMsg = typeof result.error === 'object'
+                    ? result.error.message || 'Authentication failed'
+                    : String(result.error);
+                if (errorMsg.includes('password') || errorMsg.includes('Password')) {
+                    console.log('[LOGIN] Password error detected - showing recovery options');
+                    setShowRecoveryOptions(true);
+                    setLoginError(errorMsg);
                 }
-                catch {
-                    if (result.error.includes('Unable to connect')) {
-                        setLoginError('The authentication service is currently unavailable. Please try again later.');
-                    }
-                    else if (result.error === 'CredentialsSignin') {
-                        setLoginError('Invalid email or password. Please try again.');
-                    }
-                    else {
-                        setLoginError(result.error);
-                    }
+                else if (errorMsg.includes('Unable to connect')) {
+                    setLoginError('The authentication service is currently unavailable. Please try again later.');
+                }
+                else {
+                    setLoginError(errorMsg);
                 }
                 return;
             }
@@ -165,7 +156,7 @@ function LoginForm() {
             setLoginError(null);
             setIsSubmitting(false);
             // Get updated session
-            const freshSession = await (0, react_2.getSession)();
+            const freshSession = await better_auth_client_1.authClient.getSession();
             console.log('[LOGIN] Fresh session obtained, redirecting to 2FA...');
             // Redirect to verify-code for 2FA
             const verifyUrl = `/account-auth/verify-code?callbackUrl=${encodeURIComponent(callbackUrl)}`;
@@ -235,5 +226,5 @@ function LoginPageFallback() {
     return ((0, jsx_runtime_1.jsx)("div", { className: `min-h-screen flex items-center justify-center ${colors.background}`, children: (0, jsx_runtime_1.jsxs)("div", { className: "text-center", children: [(0, jsx_runtime_1.jsxs)("svg", { className: "animate-spin h-10 w-10 mx-auto", style: { color: buttonColor }, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", children: [(0, jsx_runtime_1.jsx)("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }), (0, jsx_runtime_1.jsx)("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" })] }), (0, jsx_runtime_1.jsx)("p", { className: `mt-4 ${colors.muted}`, children: "Loading..." })] }) }));
 }
 function LoginPage() {
-    return ((0, jsx_runtime_1.jsx)(react_3.Suspense, { fallback: (0, jsx_runtime_1.jsx)(LoginPageFallback, {}), children: (0, jsx_runtime_1.jsx)(LoginForm, {}) }));
+    return ((0, jsx_runtime_1.jsx)(react_2.Suspense, { fallback: (0, jsx_runtime_1.jsx)(LoginPageFallback, {}), children: (0, jsx_runtime_1.jsx)(LoginForm, {}) }));
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 
@@ -113,7 +113,9 @@ function DemoButton({ variant, children, onClick }: DemoButtonProps) {
  * ```
  */
 export function ShowcasePage() {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const isDarkMode = useDarkMode();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');

@@ -15,15 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createRedisSessionsHandler = createRedisSessionsHandler;
 exports.createRedisSessionRevokeHandler = createRedisSessionRevokeHandler;
 const server_1 = require("next/server");
-const next_auth_1 = require("next-auth");
+const auth_1 = require("../../server/auth");
 const redis_1 = require("../../lib/redis");
 const roles_1 = require("../../lib/roles");
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions) {
-    const authOptions = await getAuthOptions();
-    const session = await (0, next_auth_1.getServerSession)(authOptions);
+async function checkAdminRole(request) {
+    const session = await (0, auth_1.getSession)(request);
     if (!session?.user) {
         return {
             isAdmin: false,
@@ -51,7 +50,7 @@ function createRedisSessionsHandler(config) {
     };
     return {
         async GET(request) {
-            const adminCheck = await checkAdminRole(config.getAuthOptions);
+            const adminCheck = await checkAdminRole(request);
             if (adminCheck.error)
                 return adminCheck.error;
             try {
@@ -118,7 +117,7 @@ function createRedisSessionsHandler(config) {
             }
         },
         async DELETE(request) {
-            const adminCheck = await checkAdminRole(config.getAuthOptions);
+            const adminCheck = await checkAdminRole(request);
             if (adminCheck.error)
                 return adminCheck.error;
             try {
@@ -159,7 +158,7 @@ function createRedisSessionRevokeHandler(config) {
     };
     return {
         async POST(request, { params }) {
-            const adminCheck = await checkAdminRole(config.getAuthOptions);
+            const adminCheck = await checkAdminRole(request);
             if (adminCheck.error)
                 return adminCheck.error;
             try {

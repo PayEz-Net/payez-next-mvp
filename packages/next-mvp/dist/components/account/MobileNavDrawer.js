@@ -7,13 +7,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MobileNavDrawer = MobileNavDrawer;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 const navigation_1 = require("next/navigation");
 const image_1 = __importDefault(require("next/image"));
 const link_1 = __importDefault(require("next/link"));
 const lucide_react_1 = require("lucide-react");
 function MobileNavDrawer({ isOpen, onClose, navItems, customSections, basePath = '/account', onSignIn, signInCallbackUrl = '/dashboard', unauthActions, authFooter, }) {
-    const { data: session } = (0, react_2.useSession)();
+    const { data: session } = better_auth_client_1.authClient.useSession();
     const pathname = (0, navigation_1.usePathname)();
     const isAuthenticated = !!session?.user;
     const isActiveRoute = (0, react_1.useCallback)((href) => pathname?.startsWith(href) ?? false, [pathname]);
@@ -44,7 +44,7 @@ function MobileNavDrawer({ isOpen, onClose, navItems, customSections, basePath =
             onSignIn();
         }
         else {
-            (0, react_2.signIn)(undefined, { callbackUrl: signInCallbackUrl });
+            better_auth_client_1.authClient.signIn.social({ provider: 'google', callbackURL: signInCallbackUrl });
         }
     };
     const handleSectionItemClick = (item) => {

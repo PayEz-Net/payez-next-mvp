@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSession, signOut } from 'next-auth/react';
-import type { Session } from 'next-auth';
+import { authClient } from '../client/better-auth-client';
 import { useAuthStore } from '../stores/authStore';
 import { isValidSession } from '../lib/session';
 import {
@@ -44,7 +43,9 @@ function sanitizeForLog(value: string | undefined, type: 'email' | 'userId'): st
  * This ensures the app NEVER shows authenticated UI with empty/invalid session data.
  */
 export function SessionSync({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const { setSession, clearSession } = useAuthStore();
   
   // Guard against duplicate sign-out calls
@@ -102,8 +103,8 @@ export function SessionSync({ children }: { children: React.ReactNode }) {
         // Cookie clearing failed - non-critical, continue with signout
       }
 
-      // Force NextAuth to sign out (this will clear cookies and trigger redirect)
-      signOut({ redirect: false })
+      // Force Better Auth to sign out (this will clear cookies and trigger redirect)
+      authClient.signOut()
         .then(() => {
           if (isMounted) {
             // Use generic error code instead of implementation details

@@ -1,14 +1,11 @@
-// Type augmentation for NextAuth - included via ambient module declaration
-// Note: Type declarations are picked up automatically via tsconfig.json, no explicit import needed
-
 // NOTE: Server-only exports are NOT exported from the root to prevent bundling Node.js modules in client code.
 // Server-side code should import from subpath exports:
 // - Session management: import { sessionStore } from '@payez/next-mvp/lib/session-store'
 // - Redis client: import { redis } from '@payez/next-mvp/lib/redis'
 // - Token expiry: import { computeTokenExpiries } from '@payez/next-mvp/lib/token-expiry'
 // - Refresh validation: import { validateRefreshToken } from '@payez/next-mvp/lib/refresh-token-validator'
-// - Auth options: import { authOptions } from '@payez/next-mvp/auth/auth-options'
-// - Auth handler: import { createAuthHandler } from '@payez/next-mvp/api/auth-handler'
+// - Better Auth: import { createBetterAuthInstance } from '@payez/next-mvp/auth/better-auth'
+// - Server auth: import { getSession } from '@payez/next-mvp/server/auth'
 
 // Client-safe exports only
 

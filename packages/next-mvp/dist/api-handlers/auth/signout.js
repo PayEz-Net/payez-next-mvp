@@ -15,7 +15,7 @@ exports.createSignoutHandler = createSignoutHandler;
 const server_1 = require("next/server");
 const headers_1 = require("next/headers");
 const session_store_1 = require("../../lib/session-store");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const app_slug_1 = require("../../lib/app-slug");
 // JWT decode helper - simple base64 decode without verification
 function jwtDecode(token) {
@@ -93,14 +93,13 @@ function createSignoutHandler(config) {
             .filter(cookie => cookie.name.startsWith(`${sessionCookieName}.`));
         // Decode NextAuth JWT to extract the Redis session UUID before deletion
         let redisSessionToken = null;
-        // First attempt: NextAuth getToken (verified + robust in most cases)
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
+        // First attempt: Better Auth getSession
         try {
-            const token = await (0, jwt_1.getToken)({ req, secret: nextAuthSecret, cookieName: (0, app_slug_1.getJwtCookieName)() });
-            redisSessionToken = token?.sessionToken || token?.redisSessionId || null;
+            const betterAuthSession = await (0, auth_1.getSession)(req);
+            redisSessionToken = betterAuthSession?.session?.token || null;
         }
         catch (e) {
-            console.warn('[SIGNOUT] getToken() failed to extract session token (will try manual decode)');
+            console.warn('[SIGNOUT] getSession() failed to extract session token (will try manual decode)');
         }
         // Second attempt: manual decode of the session cookie JWT (no verification)
         if (!redisSessionToken && (sessionToken || cookieStore.getAll().some(c => c.name.startsWith(`${sessionCookieName}.`)))) {

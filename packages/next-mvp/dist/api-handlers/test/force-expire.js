@@ -2,9 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = void 0;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
-const app_slug_1 = require("../../lib/app-slug");
 /**
  * Force-expire access token for testing refresh flow.
  *
@@ -19,20 +18,15 @@ const app_slug_1 = require("../../lib/app-slug");
  */
 const POST = async (req) => {
     try {
-        const secret = process.env.NEXTAUTH_SECRET;
-        if (!secret) {
-            return server_1.NextResponse.json({ success: false, error: 'NEXTAUTH_SECRET not configured' }, { status: 500 });
-        }
-        const cookieName = (0, app_slug_1.getJwtCookieName)();
-        const token = await (0, jwt_1.getToken)({ req, secret, cookieName });
-        let sessionToken = token?.redisSessionId;
+        const betterAuthSession = await (0, auth_1.getSession)(req);
+        let sessionToken = betterAuthSession?.session?.token;
         if (!sessionToken) {
             const headerSessionToken = req.headers.get('x-session-token') || req.headers.get('X-Session-Token');
             if (headerSessionToken) {
                 sessionToken = headerSessionToken;
             }
             else {
-                console.warn('[TEST_EXPIRE] No session token in JWT cookie or X-Session-Token header');
+                console.warn('[TEST_EXPIRE] No session token or X-Session-Token header');
                 return server_1.NextResponse.json({ success: false, error: 'No session token' }, { status: 401 });
             }
         }

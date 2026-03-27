@@ -18,10 +18,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = void 0;
 exports.createRefreshHandler = createRefreshHandler;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
 const token_expiry_1 = require("../../lib/token-expiry");
-const app_slug_1 = require("../../lib/app-slug");
 const token_utils_1 = require("../../auth/utils/token-utils");
 /**
  * Creates a refresh token handler for Next.js API routes
@@ -46,11 +45,10 @@ function createRefreshHandler(config) {
     const { idpBaseUrl, clientId, nextAuthSecret, refreshEndpoint = '/api/ExternalAuth/refresh' } = config;
     return async function POST(req) {
         try {
-            // Extract session token from NextAuth JWT
-            const token = await (0, jwt_1.getToken)({ req, secret: nextAuthSecret, cookieName: (0, app_slug_1.getJwtCookieName)() });
-            // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-            let sessionToken = (token?.sessionToken || token?.redisSessionId);
-            let userId = token?.sub;
+            // Extract session from Better Auth
+            const betterAuthSession = await (0, auth_1.getSession)(req);
+            let sessionToken = (betterAuthSession?.session?.token);
+            let userId = betterAuthSession?.user?.id;
             if (!sessionToken) {
                 // Fallback: check for session token in header (for internal server-to-server calls)
                 const headerSessionToken = req.headers.get('x-session-token');

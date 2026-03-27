@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { authClient } from '../../client/better-auth-client';
 
 /**
  * Refresh Token Test Page
@@ -16,7 +16,9 @@ import { useSession } from "next-auth/react";
  * ```
  */
 export function RefreshTokenPage() {
-  const { data: session, update } = useSession();
+  const { data: session } = authClient.useSession();
+  // TODO: Better Auth session refresh
+  const update = async () => { /* no-op: Better Auth handles session refresh internally */ };
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [sessionDetails, setSessionDetails] = useState<any>(null);

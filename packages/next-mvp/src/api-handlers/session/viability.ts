@@ -5,20 +5,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '../../lib/session-store';
-import { getToken } from 'next-auth/jwt';
+import { getSession as getRedisSession } from '../../lib/session-store';
+import { getSession } from '../../server/auth';
 import { isInitializationFailed, ensureInitialized } from '../../lib/startup-init';
-import { getJwtCookieName } from '../../lib/app-slug';
 import { getIDPClientConfig } from '../../lib/idp-client-config';
-
-/**
- * Get NextAuth secret from IDP config (cached).
- * NEVER use process.env.NEXTAUTH_SECRET directly - it may not be set.
- */
-async function getNextAuthSecret(): Promise<string> {
-  const config = await getIDPClientConfig();
-  return config.nextAuthSecret || '';
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,44 +43,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get secret from IDP config (same source as session.ts and token-lifecycle.ts)
-    const secret = await getNextAuthSecret();
-    if (!secret) {
-      console.error('[API Viability] NEXTAUTH_SECRET not available from IDP config');
-      return NextResponse.json(
-        {
-          error: 'Service Unavailable',
-          message: 'Authentication service is not properly configured',
-          code: 'AUTH_NOT_INITIALIZED'
-        },
-        { status: 503 }
-      );
+    // Get session from Better Auth
+    const betterAuthSession = await getSession(req);
+
+    // Debug logging
+    if (!betterAuthSession) {
+      console.warn('[VIABILITY] getSession returned null');
     }
 
-    // getToken is the recommended way to get the JWT from a request
-    const cookieName = getJwtCookieName();
-    const token = await getToken({ req, secret, cookieName });
-
-    // Debug logging to diagnose AKS-specific issues
-    if (!token) {
-      const cookieHeader = req.headers.get('cookie') || '';
-      const hasCookie = cookieHeader.includes(cookieName);
-      const cookieMatch = cookieHeader.match(new RegExp(`${cookieName}=([^;]*)`));
-      const cookieValue = cookieMatch ? cookieMatch[1] : null;
-      console.warn('[VIABILITY] getToken returned null:', {
-        cookieName,
-        hasCookie,
-        cookieValueLength: cookieValue?.length || 0,
-        cookieValuePreview: cookieValue ? cookieValue.substring(0, 30) + '...' : 'EMPTY',
-        secretLength: secret.length,
-        secretPreview: secret ? secret.substring(0, 10) + '...' : 'EMPTY',
-      });
-    }
-
-    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-    const sessionToken = (token?.sessionToken || token?.redisSessionId) as string | undefined;
-    if (token && sessionToken) {
-      const sessionData = await getSession(sessionToken);
+    const sessionToken = betterAuthSession?.session?.token as string | undefined;
+    if (betterAuthSession && sessionToken) {
+      const sessionData = await getRedisSession(sessionToken);
       if (sessionData) {
         // The session exists in Redis
 

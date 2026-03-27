@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { resolveNextAuthSecret } from '../../lib/nextauth-secret';
+import { getSession as getBetterAuthSession } from '../../server/auth';
 import { getSession } from '../../lib/session-store';
-import { getJwtCookieName } from '../../lib/app-slug';
 
 interface ChangePasswordRequest {
   current_password: string;
@@ -17,11 +15,10 @@ import { nanoid } from 'nanoid';
 export async function POST(req: NextRequest) {
   const requestId = nanoid();
   try {
-    // Get session token from NextAuth JWT
-    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, cookieName: getJwtCookieName() });
-    const sessionToken = (token?.sessionToken || token?.redisSessionId) as string | undefined;
-    if (!token || typeof sessionToken !== 'string') {
+    // Get session from Better Auth
+    const betterAuthSession = await getBetterAuthSession(req);
+    const sessionToken = betterAuthSession?.session?.token as string | undefined;
+    if (!betterAuthSession || typeof sessionToken !== 'string') {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
     const sessionData = await getSession(sessionToken);

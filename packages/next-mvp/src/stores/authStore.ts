@@ -14,7 +14,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { signOut } from 'next-auth/react';
+import { authClient } from '../client/better-auth-client';
 import { AppSession, isValidSession, sanitizeSession } from '../lib/session';
 import { authLogger } from '../config/logger';
 import { ENV_CONFIG } from '../config/env';
@@ -286,7 +286,7 @@ export const useAuthStore = create<AuthStore>()(
             hasIncomingSession: !!session,
             incomingUserId: session?.user?.id || '(empty)',
             incomingUserEmail: session?.user?.email || '(empty)',
-            hasAccessToken: !!session?.accessToken
+            hasAccessToken: !!(session as any)?.accessToken
           });
           
           // Clear the session state completely
@@ -336,13 +336,13 @@ export const useAuthStore = create<AuthStore>()(
         set({
           session: cleanSession,
           user,
-          accessToken: cleanSession.accessToken || null,
-          refreshToken: cleanSession.refreshToken || null,
+          accessToken: (cleanSession as any).accessToken || null,
+          refreshToken: (cleanSession as any).refreshToken || null,
           // FIXED: Use strict validation - both accessToken AND user.id must be non-empty
           isAuthenticated: true, // Already validated by sanitizeSession
           isInitialized: true,
           isLoading: false,
-          error: cleanSession.error || null,
+          error: (cleanSession as any).error || null,
         });
         
         // Auto-initialize SignalR for authenticated users
@@ -432,18 +432,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Use NextAuth signIn - this will trigger our auth callbacks
-          const { signIn } = await import('next-auth/react');
-          const result = await signIn('credentials', {
-            ...credentials,
-            redirect: false,
+          // Use Better Auth signIn
+          const result = await authClient.signIn.email({
+            email: credentials.email,
+            password: credentials.password,
           });
-          
-          if (result?.ok) {
+
+          if (result?.data) {
             authLogger.info('[AuthStore] Sign in successful');
             return true;
           } else {
-            const errorMessage = result?.error || 'Sign in failed';
+            const errorMessage = (result as any)?.error
+            ? (typeof (result as any).error === 'object' ? ((result as any).error as any).message : String((result as any).error))
+            : 'Sign in failed';
             set({ error: errorMessage, isLoading: false });
             return false;
           }
@@ -472,8 +473,8 @@ export const useAuthStore = create<AuthStore>()(
         });
         
         try {
-          // Use NextAuth signOut
-          await signOut({ redirect: false });
+          // Use Better Auth signOut
+          await authClient.signOut();
           authLogger.info('[AuthStore] Sign out completed');
         } catch (error) {
           authLogger.error('[AuthStore] Sign out error:', error);
@@ -557,9 +558,8 @@ export const useAuthStore = create<AuthStore>()(
             });
           }
           
-          // Step 6: Force NextAuth signOut (this should clear the session cookie)
-          const { signOut } = await import('next-auth/react');
-          await signOut({ redirect: false });
+          // Step 6: Force Better Auth signOut (this should clear the session cookie)
+          await authClient.signOut();
           
           authLogger.info('[AuthStore] Force logout completed, redirecting to login');
           
@@ -632,16 +632,15 @@ export const useAuthStore = create<AuthStore>()(
             let token = get().session?.sessionToken as string | undefined;
             if (token) return token;
             try {
-              const { getSession } = await import('next-auth/react');
               for (let attempt = 1; attempt <= 3 && !token; attempt++) {
-                const s: any = await getSession();
-                token = s?.sessionToken;
+                const { data: s } = await authClient.getSession();
+                token = (s as any)?.sessionToken;
                 if (!token) {
                   await new Promise(r => setTimeout(r, 150));
                 }
               }
             } catch {
-              authLogger.warn('[AuthStore] Failed to resolve session token from NextAuth during refresh');
+              authLogger.warn('[AuthStore] Failed to resolve session token from Better Auth during refresh');
             }
             return token;
           };
@@ -726,28 +725,24 @@ export const useAuthStore = create<AuthStore>()(
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
-            // Force NextAuth to reload the session from the session store
-            // This triggers the JWT callback which reads fresh data from Redis
-            const { getSession } = await import('next-auth/react');
-            
+            // Force Better Auth to reload the session
             authLogger.debug(`[AuthStore] Rehydration attempt ${attempt}/${maxRetries}`);
-            
-            // Force session refresh - this calls NextAuth's session endpoint
-            // which triggers JWT callback to read fresh tokens from Redis
-            const freshSession = await getSession();
-            
+
+            // Force session refresh via Better Auth
+            const { data: freshSession } = await authClient.getSession();
+
             if (!freshSession) {
-              throw new Error('No session returned from NextAuth after refresh');
+              throw new Error('No session returned from Better Auth after refresh');
             }
             
-            if (!freshSession.accessToken) {
+            if (!(freshSession as any).accessToken) {
               throw new Error('Fresh session missing access token');
             }
             
             // Verify the token is actually fresh (not expired)
             try {
               const { jwtDecode } = await import('@/lib/jwt-decode');
-              const decoded = jwtDecode(freshSession.accessToken);
+              const decoded = jwtDecode((freshSession as any).accessToken);
               
               if (!decoded?.exp) {
                 throw new Error('Fresh token missing expiration claim');

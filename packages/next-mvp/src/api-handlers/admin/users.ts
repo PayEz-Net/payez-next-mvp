@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getStartupIDPConfig } from '../../lib/startup-init';
 import { ADMIN_ROLES, hasAnyRole } from '../../lib/roles';
 
@@ -17,9 +17,8 @@ interface VibeRequestOptions {
   body?: unknown;
 }
 
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -100,7 +99,6 @@ async function vibeServiceRequest<T = unknown>(
 }
 
 export interface AdminUsersHandlerConfig {
-  getAuthOptions: () => Promise<any>;
 }
 
 /**
@@ -110,7 +108,7 @@ export interface AdminUsersHandlerConfig {
 export function createUsersHandler(config: AdminUsersHandlerConfig) {
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const { searchParams } = new URL(request.url);
@@ -175,7 +173,7 @@ export function createUsersHandler(config: AdminUsersHandlerConfig) {
     },
 
     async POST(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const body = await request.json();

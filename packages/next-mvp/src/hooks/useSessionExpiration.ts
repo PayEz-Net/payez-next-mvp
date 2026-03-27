@@ -31,12 +31,11 @@
  */
 
 import { useEffect } from 'react';
-import { signOut } from 'next-auth/react';
-import type { Session } from 'next-auth';
+import { authClient } from '../client/better-auth-client';
 
 export interface UseSessionExpirationOptions {
-  /** NextAuth session object */
-  session: Session | null | undefined;
+  /** Session object */
+  session: any | null | undefined;
   /** Next.js router for navigation */
   router: {
     push: (url: string) => void;
@@ -77,7 +76,7 @@ export function useSessionExpiration({
 
       setTimeout(async () => {
         // Clear the session before redirecting
-        await signOut({ redirect: false });
+        await authClient.signOut();
 
         const params = new URLSearchParams({
           callbackUrl,

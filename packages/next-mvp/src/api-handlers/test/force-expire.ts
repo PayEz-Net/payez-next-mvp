@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getSession as getBetterAuthSession } from '../../server/auth';
 import { getSession, updateSession } from '../../lib/session-store';
-import { getJwtCookieName } from '../../lib/app-slug';
 
 /**
  * Force-expire access token for testing refresh flow.
@@ -17,21 +16,15 @@ import { getJwtCookieName } from '../../lib/app-slug';
  */
 export const POST = async (req: NextRequest) => {
   try {
-    const secret = process.env.NEXTAUTH_SECRET;
-    if (!secret) {
-      return NextResponse.json({ success: false, error: 'NEXTAUTH_SECRET not configured' }, { status: 500 });
-    }
+    const betterAuthSession = await getBetterAuthSession(req);
 
-    const cookieName = getJwtCookieName();
-    const token = await getToken({ req, secret, cookieName });
-
-    let sessionToken = token?.redisSessionId as string | undefined;
+    let sessionToken = betterAuthSession?.session?.token as string | undefined;
     if (!sessionToken) {
       const headerSessionToken = req.headers.get('x-session-token') || req.headers.get('X-Session-Token');
       if (headerSessionToken) {
         sessionToken = headerSessionToken;
       } else {
-        console.warn('[TEST_EXPIRE] No session token in JWT cookie or X-Session-Token header');
+        console.warn('[TEST_EXPIRE] No session token or X-Session-Token header');
         return NextResponse.json({ success: false, error: 'No session token' }, { status: 401 });
       }
     }

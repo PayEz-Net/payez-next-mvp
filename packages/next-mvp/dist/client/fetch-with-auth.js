@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchWithAuth = fetchWithAuth;
 // src/client/fetch-with-auth.ts
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("./better-auth-client");
 /**
  * A wrapper for the `fetch` API that automatically injects the session's
  * accessToken into the Authorization header and handles 401 Unauthorized
@@ -15,7 +15,7 @@ const react_1 = require("next-auth/react");
  */
 async function fetchWithAuth(url, options = {}) {
     // 1. Retrieve the client-side session to get the accessToken.
-    const session = await (0, react_1.getSession)();
+    const { data: session } = await better_auth_client_1.authClient.getSession();
     // 2. Inject the accessToken into the Authorization header.
     const headers = new Headers(options.headers);
     if (session?.accessToken) {

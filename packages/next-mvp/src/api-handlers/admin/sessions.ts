@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getStartupIDPConfig } from '../../lib/startup-init';
 import { ADMIN_ROLES, hasAnyRole } from '../../lib/roles';
 
@@ -21,9 +21,8 @@ interface VibeRequestOptions {
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; userId?: number; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; userId?: number; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -126,7 +125,6 @@ function getCountryFlag(countryCode: string): string {
 }
 
 export interface AdminSessionsHandlerConfig {
-  getAuthOptions: () => Promise<any>;
 }
 
 /**
@@ -136,7 +134,7 @@ export interface AdminSessionsHandlerConfig {
 export function createSessionsHandler(config: AdminSessionsHandlerConfig) {
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const { searchParams } = new URL(request.url);
@@ -201,7 +199,7 @@ export function createSessionsHandler(config: AdminSessionsHandlerConfig) {
     },
 
     async POST(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       const body = await request.json();

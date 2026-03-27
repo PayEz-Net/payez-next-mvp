@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Performs complete logout:
  * 1. Revokes tokens at IDP (if refresh token available)
  * 2. Deletes session from store
- * 3. Clears NextAuth session cookie
+ * 3. Clears session cookies
  */
 export declare function POST(req: NextRequest): Promise<NextResponse<{
     success: boolean;

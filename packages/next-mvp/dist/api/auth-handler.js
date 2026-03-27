@@ -16,10 +16,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createAuthHandler = createAuthHandler;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../server/auth");
 const nanoid_1 = require("nanoid");
 const session_store_1 = require("../lib/session-store");
-const app_slug_1 = require("../lib/app-slug");
 /**
  * Creates an auth-aware handler with automatic token refresh
  *
@@ -262,14 +261,15 @@ function createAuthHandler(options = {}) {
     return {
         handle: (handler) => {
             return async (req, context = {}) => {
-                // Extract token from NextAuth
-                const token = await (0, jwt_1.getToken)({ req, secret: nextAuthSecret, cookieName: (0, app_slug_1.getJwtCookieName)() });
+                // Extract session from Better Auth
+                const betterAuthSession = await (0, auth_1.getSession)(req);
+                const token = betterAuthSession ? { ...betterAuthSession.user, ...betterAuthSession.session } : null;
                 // Check if auth is required
-                if (requireAuth && !token) {
+                if (requireAuth && !betterAuthSession) {
                     return server_1.NextResponse.json({ error: 'Authentication required', code: 'UNAUTHORIZED' }, { status: 401 });
                 }
-                // If no token and auth not required, call handler without auth context
-                if (!token) {
+                // If no session and auth not required, call handler without auth context
+                if (!betterAuthSession) {
                     return handler(req, context, null);
                 }
                 // Validate client_slug (token confusion attack prevention)
@@ -305,8 +305,8 @@ function createAuthHandler(options = {}) {
                 let authContext = {
                     token,
                     accessToken: token.accessToken || '',
-                    userId: token.sub || token.userId || '',
-                    sessionToken: token.redisSessionId || '',
+                    userId: betterAuthSession.user?.id || token.userId || '',
+                    sessionToken: betterAuthSession.session?.token || '',
                     refreshToken: token.refreshToken,
                 };
                 // Check if token needs refresh

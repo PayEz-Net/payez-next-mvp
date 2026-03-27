@@ -17,18 +17,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GET = GET;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
-const app_slug_1 = require("../../lib/app-slug");
 const idp_client_config_1 = require("../../lib/idp-client-config");
-/**
- * Get NextAuth secret from IDP config (cached).
- * NEVER use process.env.NEXTAUTH_SECRET at module level - it may not be set yet.
- */
-async function getNextAuthSecret() {
-    const config = await (0, idp_client_config_1.getIDPClientConfig)();
-    return config.nextAuthSecret || '';
-}
 /**
  * Get tenant-wide 2FA requirement from cached client config (from broker handshake)
  */
@@ -52,10 +43,8 @@ async function getTenantRequiresTwoFactor() {
  */
 async function GET(req) {
     try {
-        const cookieName = (0, app_slug_1.getJwtCookieName)();
-        const secret = await getNextAuthSecret();
-        const token = await (0, jwt_1.getToken)({ req, secret, cookieName });
-        if (!token) {
+        const baSession = await (0, auth_1.getSession)(req);
+        if (!baSession) {
             return server_1.NextResponse.json({
                 viable: false,
                 needsRefresh: false,
@@ -63,8 +52,8 @@ async function GET(req) {
                 reason: 'No session found'
             });
         }
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-        const sessionToken = token.sessionToken || token.redisSessionId;
+        const token = baSession;
+        const sessionToken = baSession.session?.token;
         const session = sessionToken ? await (0, session_store_1.getSession)(sessionToken) : null;
         // CRITICAL: Detect stale cookie state (JWT exists but Redis session missing)
         if (sessionToken && !session) {

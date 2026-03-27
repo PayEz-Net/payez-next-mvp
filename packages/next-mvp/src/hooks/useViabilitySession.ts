@@ -18,7 +18,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { authClient } from '../client/better-auth-client';
 
 export interface ViabilityState {
   /** Whether the user is authenticated according to Redis */
@@ -222,7 +222,8 @@ export function useViabilitySession(options: UseViabilitySessionOptions = {}): V
     onSessionInvalid
   } = options;
 
-  const { status: nextAuthStatus } = useSession();
+  const { data: _sessionData, isPending } = authClient.useSession();
+  const nextAuthStatus = isPending ? 'loading' : _sessionData ? 'authenticated' : 'unauthenticated';
   const [, forceUpdate] = useState(0);
   const mountedRef = useRef(true);
   const initializedRef = useRef(false);

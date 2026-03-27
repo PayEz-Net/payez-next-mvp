@@ -2,19 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = POST;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
-const app_slug_1 = require("../../lib/app-slug");
 const nanoid_1 = require("nanoid");
 // ...
 async function POST(req) {
     const requestId = (0, nanoid_1.nanoid)();
     try {
-        // Get session token from NextAuth JWT
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-        const token = await (0, jwt_1.getToken)({ req, secret: process.env.NEXTAUTH_SECRET, cookieName: (0, app_slug_1.getJwtCookieName)() });
-        const sessionToken = (token?.sessionToken || token?.redisSessionId);
-        if (!token || typeof sessionToken !== 'string') {
+        // Get session from Better Auth
+        const betterAuthSession = await (0, auth_1.getSession)(req);
+        const sessionToken = betterAuthSession?.session?.token;
+        if (!betterAuthSession || typeof sessionToken !== 'string') {
             return server_1.NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         }
         const sessionData = await (0, session_store_1.getSession)(sessionToken);

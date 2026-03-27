@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -52,7 +52,7 @@ export function MobileNavDrawer({
   unauthActions,
   authFooter,
 }: MobileNavDrawerProps) {
-  const { data: session } = useSession();
+  const { data: session } = authClient.useSession();
   const pathname = usePathname();
   const isAuthenticated = !!session?.user;
 
@@ -90,7 +90,7 @@ export function MobileNavDrawer({
     if (onSignIn) {
       onSignIn();
     } else {
-      signIn(undefined, { callbackUrl: signInCallbackUrl });
+      authClient.signIn.social({ provider: 'google', callbackURL: signInCallbackUrl });
     }
   };
 

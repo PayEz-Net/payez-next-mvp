@@ -49,7 +49,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeAuthStore = exports.useAuthStore = void 0;
 const zustand_1 = require("zustand");
 const middleware_1 = require("zustand/middleware");
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 const session_1 = require("../lib/session");
 const logger_1 = require("../config/logger");
 const signalr_1 = require("@microsoft/signalr");
@@ -254,18 +254,19 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
     signIn: async (credentials) => {
         set({ isLoading: true, error: null });
         try {
-            // Use NextAuth signIn - this will trigger our auth callbacks
-            const { signIn } = await Promise.resolve().then(() => __importStar(require('next-auth/react')));
-            const result = await signIn('credentials', {
-                ...credentials,
-                redirect: false,
+            // Use Better Auth signIn
+            const result = await better_auth_client_1.authClient.signIn.email({
+                email: credentials.email,
+                password: credentials.password,
             });
-            if (result?.ok) {
+            if (result?.data) {
                 logger_1.authLogger.info('[AuthStore] Sign in successful');
                 return true;
             }
             else {
-                const errorMessage = result?.error || 'Sign in failed';
+                const errorMessage = result?.error
+                    ? (typeof result.error === 'object' ? result.error.message : String(result.error))
+                    : 'Sign in failed';
                 set({ error: errorMessage, isLoading: false });
                 return false;
             }
@@ -291,8 +292,8 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
             rolesLastFetch: null,
         });
         try {
-            // Use NextAuth signOut
-            await (0, react_1.signOut)({ redirect: false });
+            // Use Better Auth signOut
+            await better_auth_client_1.authClient.signOut();
             logger_1.authLogger.info('[AuthStore] Sign out completed');
         }
         catch (error) {
@@ -361,9 +362,8 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
                     }
                 });
             }
-            // Step 6: Force NextAuth signOut (this should clear the session cookie)
-            const { signOut } = await Promise.resolve().then(() => __importStar(require('next-auth/react')));
-            await signOut({ redirect: false });
+            // Step 6: Force Better Auth signOut (this should clear the session cookie)
+            await better_auth_client_1.authClient.signOut();
             logger_1.authLogger.info('[AuthStore] Force logout completed, redirecting to login');
             // Step 7: Longer delay to ensure everything is processed
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -421,9 +421,8 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
                 if (token)
                     return token;
                 try {
-                    const { getSession } = await Promise.resolve().then(() => __importStar(require('next-auth/react')));
                     for (let attempt = 1; attempt <= 3 && !token; attempt++) {
-                        const s = await getSession();
+                        const { data: s } = await better_auth_client_1.authClient.getSession();
                         token = s?.sessionToken;
                         if (!token) {
                             await new Promise(r => setTimeout(r, 150));
@@ -431,7 +430,7 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
                     }
                 }
                 catch {
-                    logger_1.authLogger.warn('[AuthStore] Failed to resolve session token from NextAuth during refresh');
+                    logger_1.authLogger.warn('[AuthStore] Failed to resolve session token from Better Auth during refresh');
                 }
                 return token;
             };
@@ -504,15 +503,12 @@ exports.useAuthStore = (0, zustand_1.create)()((0, middleware_1.devtools)((set, 
         logger_1.authLogger.info('[AuthStore] Starting session rehydration after token refresh');
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                // Force NextAuth to reload the session from the session store
-                // This triggers the JWT callback which reads fresh data from Redis
-                const { getSession } = await Promise.resolve().then(() => __importStar(require('next-auth/react')));
+                // Force Better Auth to reload the session
                 logger_1.authLogger.debug(`[AuthStore] Rehydration attempt ${attempt}/${maxRetries}`);
-                // Force session refresh - this calls NextAuth's session endpoint
-                // which triggers JWT callback to read fresh tokens from Redis
-                const freshSession = await getSession();
+                // Force session refresh via Better Auth
+                const { data: freshSession } = await better_auth_client_1.authClient.getSession();
                 if (!freshSession) {
-                    throw new Error('No session returned from NextAuth after refresh');
+                    throw new Error('No session returned from Better Auth after refresh');
                 }
                 if (!freshSession.accessToken) {
                     throw new Error('Fresh session missing access token');

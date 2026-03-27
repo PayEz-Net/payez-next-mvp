@@ -1,16 +1,14 @@
 "use strict";
-// Type augmentation for NextAuth - included via ambient module declaration
-// Note: Type declarations are picked up automatically via tsconfig.json, no explicit import needed
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.queryAuditLog = exports.writeAuditLog = exports.getHealthMetrics = exports.getErrorMetrics = exports.useAdminAnalytics = exports.useAuditLog = exports.useHealthMetrics = exports.useErrorMetrics = exports.AdminAnalyticsLayout = exports.AuditLogViewer = exports.HealthMetricsCard = exports.ErrorMetricsCard = exports.MobileNavDrawer = exports.UserAvatarMenu = exports.createMvpMiddleware = exports.getRouteConfig = exports.configurePublicRoutes = exports.isUnauthenticatedRoute = exports.makeAuthDecision = exports.useTraditionalAuthEnabled = exports.useFederatedAuthEnabled = exports.useFederatedProviders = exports.useAuthMode = exports.useAuthConfig = exports.AuthProvider = exports.useAnonSession = exports.fetchWithAuth = void 0;
 // NOTE: Server-only exports are NOT exported from the root to prevent bundling Node.js modules in client code.
 // Server-side code should import from subpath exports:
 // - Session management: import { sessionStore } from '@payez/next-mvp/lib/session-store'
 // - Redis client: import { redis } from '@payez/next-mvp/lib/redis'
 // - Token expiry: import { computeTokenExpiries } from '@payez/next-mvp/lib/token-expiry'
 // - Refresh validation: import { validateRefreshToken } from '@payez/next-mvp/lib/refresh-token-validator'
-// - Auth options: import { authOptions } from '@payez/next-mvp/auth/auth-options'
-// - Auth handler: import { createAuthHandler } from '@payez/next-mvp/api/auth-handler'
+// - Better Auth: import { createBetterAuthInstance } from '@payez/next-mvp/auth/better-auth'
+// - Server auth: import { getSession } from '@payez/next-mvp/server/auth'
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.queryAuditLog = exports.writeAuditLog = exports.getHealthMetrics = exports.getErrorMetrics = exports.useAdminAnalytics = exports.useAuditLog = exports.useHealthMetrics = exports.useErrorMetrics = exports.AdminAnalyticsLayout = exports.AuditLogViewer = exports.HealthMetricsCard = exports.ErrorMetricsCard = exports.MobileNavDrawer = exports.UserAvatarMenu = exports.createMvpMiddleware = exports.getRouteConfig = exports.configurePublicRoutes = exports.isUnauthenticatedRoute = exports.makeAuthDecision = exports.useTraditionalAuthEnabled = exports.useFederatedAuthEnabled = exports.useFederatedProviders = exports.useAuthMode = exports.useAuthConfig = exports.AuthProvider = exports.useAnonSession = exports.fetchWithAuth = void 0;
 // Client-safe exports only
 // Client-side utilities
 var fetch_with_auth_1 = require("./client/fetch-with-auth");

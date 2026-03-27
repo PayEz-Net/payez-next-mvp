@@ -163,7 +163,7 @@ export function makeAuthDecision(context: AuthContext): AuthAction {
     return { type: 'allow' };
   }
 
-  // Token expired - redirect to login (let NextAuth handle refresh)
+  // Token expired - redirect to login
   if (sessionPointer.expired) {
     if (isLoginPage) {
       return { type: 'allow' };

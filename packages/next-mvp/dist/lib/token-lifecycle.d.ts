@@ -33,6 +33,32 @@ export interface TokenError {
     terminal?: boolean;
 }
 export type EnsureFreshTokenResult = TokenResult | TokenError;
+/**
+ * Ensures we have a fresh access token before making API calls.
+ *
+ * This utility checks token expiration and triggers a refresh if needed,
+ * preventing 401 errors from expired tokens being sent to downstream APIs.
+ *
+ * @param request - The incoming NextRequest
+ * @returns TokenResult with accessToken and sessionData, or TokenError
+ *
+ * @example
+ * ```typescript
+ * import { ensureFreshToken } from '@payez/next-mvp/lib/token-lifecycle';
+ *
+ * export async function GET(request: NextRequest) {
+ *   const tokenResult = await ensureFreshToken(request);
+ *   if (!tokenResult.success) {
+ *     return NextResponse.json({ error: tokenResult.error }, { status: 401 });
+ *   }
+ *
+ *   // Use tokenResult.accessToken for downstream API calls
+ *   const response = await fetch('https://api.example.com/data', {
+ *     headers: { 'Authorization': `Bearer ${tokenResult.accessToken}` }
+ *   });
+ * }
+ * ```
+ */
 export declare function ensureFreshToken(request: NextRequest): Promise<EnsureFreshTokenResult>;
 /**
  * Get authorization header from fresh token.

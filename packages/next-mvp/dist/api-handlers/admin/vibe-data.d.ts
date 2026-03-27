@@ -9,7 +9,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminVibeHandlerConfig {
-    getAuthOptions: () => Promise<any>;
 }
 /**
  * GET /api/admin/vibe/collections

@@ -8,9 +8,15 @@
 // NO MORE GUESSING data.data.data.data - EVER AGAIN!
 // ========================================================================================
 
-import { getSession } from 'next-auth/react';
-import { DefaultSession } from 'next-auth';
-import { 
+import { authClient } from '../client/better-auth-client';
+
+/** Unwrap Better Auth getSession() to a flat session-like object for backward compat */
+async function getSession(): Promise<any> {
+  const { data } = await authClient.getSession();
+  return data ?? null;
+}
+
+import {
   StandardizedResponse,
   StandardizedApiResponse,
   StandardizedPagedResponse,

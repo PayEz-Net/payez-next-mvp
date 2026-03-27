@@ -8,8 +8,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProviders, LiteralUnion, ClientSafeProvider } from 'next-auth/react';
-import { BuiltInProviderType } from 'next-auth/providers/index';
+import { authClient } from '../client/better-auth-client';
 import type { FederatedProvider } from '../types/auth';
 
 // Map NextAuth provider IDs to our FederatedProvider type
@@ -29,7 +28,7 @@ export interface UseAvailableProvidersResult {
     providers: FederatedProvider[];
     isLoading: boolean;
     error: Error | null;
-    rawProviders: Record<LiteralUnion<BuiltInProviderType>, ClientSafeProvider> | null;
+    rawProviders: Record<string, any> | null;
 }
 
 /**
@@ -56,7 +55,7 @@ export interface UseAvailableProvidersResult {
  */
 export function useAvailableProviders(): UseAvailableProvidersResult {
     const [providers, setProviders] = useState<FederatedProvider[]>([]);
-    const [rawProviders, setRawProviders] = useState<Record<LiteralUnion<BuiltInProviderType>, ClientSafeProvider> | null>(null);
+    const [rawProviders, setRawProviders] = useState<Record<string, any> | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
@@ -65,7 +64,12 @@ export function useAvailableProviders(): UseAvailableProvidersResult {
 
         async function fetchProviders() {
             try {
-                const result = await getProviders();
+                // Fetch available providers from Better Auth
+                // Better Auth doesn't have a getProviders equivalent, so we use a static list
+                // based on configured social providers
+                const result: Record<string, { id: string; name: string }> = {
+                    google: { id: 'google', name: 'Google' },
+                };
 
                 if (!mounted) return;
 

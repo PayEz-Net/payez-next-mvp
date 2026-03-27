@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { User, Settings, Shield, LogOut } from 'lucide-react';
@@ -39,7 +39,9 @@ export function UserAvatarMenu({
   customItems,
   onSignOut,
 }: UserAvatarMenuProps) {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -102,7 +104,8 @@ export function UserAvatarMenu({
     } else {
       // Use NEXT_PUBLIC env var or default to root
       const logoutUrl = process.env.NEXT_PUBLIC_LOGOUT_REDIRECT_URL || '/';
-      await signOut({ callbackUrl: logoutUrl });
+      await authClient.signOut();
+      window.location.href = logoutUrl;
     }
   };
 

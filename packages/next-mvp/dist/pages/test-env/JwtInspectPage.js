@@ -3,8 +3,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtInspectPage = JwtInspectPage;
 const jsx_runtime_1 = require("react/jsx-runtime");
-const react_1 = require("next-auth/react");
-const react_2 = require("react");
+const better_auth_client_1 = require("../../client/better-auth-client");
+const react_1 = require("react");
 // Decode JWT header (contains kid, alg, typ)
 function decodeJwtHeader(token) {
     try {
@@ -46,13 +46,15 @@ function decodeJwtPayload(token) {
  * ```
  */
 function JwtInspectPage() {
-    const { data: session, status } = (0, react_1.useSession)();
-    const [copied, setCopied] = (0, react_2.useState)(null);
-    const [isDarkMode, setIsDarkMode] = (0, react_2.useState)(false);
-    const [jwtHeader, setJwtHeader] = (0, react_2.useState)(null);
-    const [jwtPayload, setJwtPayload] = (0, react_2.useState)(null);
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
+    const [copied, setCopied] = (0, react_1.useState)(null);
+    const [isDarkMode, setIsDarkMode] = (0, react_1.useState)(false);
+    const [jwtHeader, setJwtHeader] = (0, react_1.useState)(null);
+    const [jwtPayload, setJwtPayload] = (0, react_1.useState)(null);
     // Detect dark mode
-    (0, react_2.useEffect)(() => {
+    (0, react_1.useEffect)(() => {
         const checkDarkMode = () => {
             const isDark = document.documentElement.classList.contains('dark') ||
                 window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -64,7 +66,7 @@ function JwtInspectPage() {
         return () => mediaQuery.removeEventListener('change', checkDarkMode);
     }, []);
     // Decode JWT header and payload when accessToken changes
-    (0, react_2.useEffect)(() => {
+    (0, react_1.useEffect)(() => {
         const ext = session;
         if (ext?.accessToken) {
             setJwtHeader(decodeJwtHeader(ext.accessToken));

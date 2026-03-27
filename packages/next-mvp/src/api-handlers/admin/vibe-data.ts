@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getStartupIDPConfig } from '../../lib/startup-init';
 import { ADMIN_ROLES, hasAnyRole } from '../../lib/roles';
 
@@ -21,9 +21,8 @@ interface VibeRequestOptions {
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -125,7 +124,6 @@ async function vibeServiceRequest<T = unknown>(
 // =============================================================================
 
 export interface AdminVibeHandlerConfig {
-  getAuthOptions: () => Promise<any>;
 }
 
 /**
@@ -134,7 +132,7 @@ export interface AdminVibeHandlerConfig {
  */
 export function createGetCollectionsHandler(config: AdminVibeHandlerConfig) {
   return async function GET(request: NextRequest) {
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const result = await vibeServiceRequest<any>('/v1/collections', { method: 'GET' });
@@ -160,7 +158,7 @@ export function createGetTablesHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string }> }
   ) {
     const { collection } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const result = await vibeServiceRequest<any>(`/v1/collections/${collection}/tables`, { method: 'GET' });
@@ -186,7 +184,7 @@ export function createGetTableDataHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string; table: string }> }
   ) {
     const { collection, table } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const searchParams = request.nextUrl.searchParams.toString();
@@ -220,7 +218,7 @@ export function createGetRecordHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string; table: string; id: string }> }
   ) {
     const { collection, table, id } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const endpoint = `/v1/collections/${collection}/tables/${table}/${id}`;
@@ -248,7 +246,7 @@ export function createUpdateRecordHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string; table: string; id: string }> }
   ) {
     const { collection, table, id } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const body = await request.json();
@@ -276,7 +274,7 @@ export function createDeleteRecordHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string; table: string; id: string }> }
   ) {
     const { collection, table, id } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const endpoint = `/v1/collections/${collection}/tables/${table}/${id}`;
@@ -303,7 +301,7 @@ export function createQueryHandler(config: AdminVibeHandlerConfig) {
     { params }: { params: Promise<{ collection: string; table: string }> }
   ) {
     const { collection, table } = await params;
-    const adminCheck = await checkAdminRole(config.getAuthOptions);
+    const adminCheck = await checkAdminRole(request);
     if (adminCheck.error) return adminCheck.error;
 
     const body = await request.json();

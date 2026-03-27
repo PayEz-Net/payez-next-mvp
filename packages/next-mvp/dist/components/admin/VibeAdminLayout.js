@@ -6,9 +6,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VibeAdminLayout = VibeAdminLayout;
 const jsx_runtime_1 = require("react/jsx-runtime");
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 const navigation_1 = require("next/navigation");
-const react_2 = require("react");
+const react_1 = require("react");
 const link_1 = __importDefault(require("next/link"));
 const VibeAdminContext_1 = require("./VibeAdminContext");
 const lucide_react_1 = require("lucide-react");
@@ -21,7 +21,9 @@ const defaultNavItems = [
     { id: 'settings', label: 'Settings', icon: lucide_react_1.Settings },
 ];
 function VibeAdminLayout({ children, activeTabId = 'stats', onTabChange, headerContent, isDarkMode: isDarkModeProp, adminRole = 'vibe_app_admin', }) {
-    const { data: session, status } = (0, react_1.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
     const router = (0, navigation_1.useRouter)();
     const adminConfig = (0, VibeAdminContext_1.useVibeAdmin)();
     const isDark = isDarkModeProp ?? adminConfig.isDarkMode ?? false;
@@ -36,7 +38,7 @@ function VibeAdminLayout({ children, activeTabId = 'stats', onTabChange, headerC
     });
     const userRoles = session?.user?.roles || [];
     const hasAdminRole = userRoles.includes(adminRole) || userRoles.includes('payez_admin');
-    (0, react_2.useEffect)(() => {
+    (0, react_1.useEffect)(() => {
         if (status === 'unauthenticated') {
             router.push('/account-auth/login?callbackUrl=' + basePath);
             return;

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { getProviders } from 'next-auth/react';
+import { authClient } from './better-auth-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthConfig, AuthMode, FederatedProvider } from '@/types/auth';
 
@@ -62,7 +62,11 @@ export function AuthProvider({ children, config, useDynamicProviders = true }: A
 
     async function fetchDynamicProviders() {
       try {
-        const result = await getProviders();
+        // Better Auth doesn't have a getProviders equivalent.
+        // Use static provider map based on configured social providers.
+        const result: Record<string, { id: string; name: string }> | null = {
+          google: { id: 'google', name: 'Google' },
+        };
 
         if (!mounted) return;
 

@@ -12,7 +12,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface RedisSessionsHandlerConfig {
-    getAuthOptions: () => Promise<any>;
     appSlug?: string;
 }
 /**

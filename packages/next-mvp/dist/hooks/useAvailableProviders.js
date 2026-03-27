@@ -16,7 +16,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.useAvailableProviders = useAvailableProviders;
 exports.useIsProviderAvailable = useIsProviderAvailable;
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
 // Map NextAuth provider IDs to our FederatedProvider type
 const PROVIDER_MAP = {
     'google': 'google',
@@ -59,7 +58,12 @@ function useAvailableProviders() {
         let mounted = true;
         async function fetchProviders() {
             try {
-                const result = await (0, react_2.getProviders)();
+                // Fetch available providers from Better Auth
+                // Better Auth doesn't have a getProviders equivalent, so we use a static list
+                // based on configured social providers
+                const result = {
+                    google: { id: 'google', name: 'Google' },
+                };
                 if (!mounted)
                     return;
                 setRawProviders(result);

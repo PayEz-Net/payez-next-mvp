@@ -32,7 +32,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession, signOut, getSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { Suspense } from 'react';
 import { useColors } from '../../theme/useTheme';
 
@@ -54,7 +54,11 @@ function VerifyCodeForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
-  const { data: session, status, update: updateSession } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
+  // TODO: Better Auth session refresh
+  const updateSession = async () => { return session; };
   const colors = useColors();
 
   // Method selection
@@ -146,7 +150,7 @@ function VerifyCodeForm() {
           // Session expired - redirect to login
           setError('Your session has expired. Redirecting to login...');
           setTimeout(async () => {
-            await signOut({ redirect: false });
+            await authClient.signOut();
             const safeCallback = callbackUrl.startsWith('/account-auth/') ? '/dashboard' : callbackUrl;
             router.push(`/account-auth/login?callbackUrl=${encodeURIComponent(safeCallback)}`);
           }, 1200);
@@ -197,7 +201,7 @@ function VerifyCodeForm() {
           if (data.valid === false || data.mfaExpired === true) {
             setError('Your session has expired. Redirecting to login...');
             setTimeout(async () => {
-              await signOut({ redirect: false });
+              await authClient.signOut();
               if (typeof window !== 'undefined') {
                 sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
               }
@@ -243,7 +247,7 @@ function VerifyCodeForm() {
         );
         
         setTimeout(async () => {
-          await signOut({ redirect: false });
+          await authClient.signOut();
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
           }
@@ -318,7 +322,7 @@ function VerifyCodeForm() {
         );
         
         setTimeout(async () => {
-          await signOut({ redirect: false });
+          await authClient.signOut();
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
           }

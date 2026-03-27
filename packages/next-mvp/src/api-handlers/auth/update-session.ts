@@ -10,8 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { getJwtCookieName } from '../../lib/app-slug';
+import { getSession } from '../../server/auth';
 
 // Add protection headers to all responses
 function addSecurityHeaders(response: NextResponse) {
@@ -40,7 +39,7 @@ interface UpdateSessionResponse {
 }
 
 interface UpdateSessionConfig {
-  nextAuthSecret: string;
+  nextAuthSecret?: string; // Legacy - no longer used by Better Auth
 }
 
 /**
@@ -77,32 +76,31 @@ export function createUpdateSessionHandler(config: UpdateSessionConfig) {
 
       const { twoFactorSessionVerified, twoFactorMethod } = body;
 
-      // Get the current token
-      const token = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
-      if (!token) {
+      // Get the current session from Better Auth
+      const session = await getSession(req);
+      if (!session) {
         return addSecurityHeaders(NextResponse.json(
           { error: 'No session token available' },
           { status: 401 }
         ));
       }
 
-      // Update the token with 2FA challenge completion status
-      const updatedToken = {
-        ...token,
+      // Update the session with 2FA challenge completion status
+      const updatedSession = {
         twoFactorSessionVerified: !!twoFactorSessionVerified,
-        twoFactorMethod: twoFactorMethod || token.twoFactorMethod
+        twoFactorMethod: twoFactorMethod || (session as any).twoFactorMethod
       };
 
       console.info('[UPDATE-SESSION] Session updated successfully', {
-        userId: token.sub,
-        twoFactorSessionVerified: updatedToken.twoFactorSessionVerified,
-        twoFactorMethod: updatedToken.twoFactorMethod
+        userId: session.user?.id,
+        twoFactorSessionVerified: updatedSession.twoFactorSessionVerified,
+        twoFactorMethod: updatedSession.twoFactorMethod
       });
 
       const responseData: UpdateSessionResponse = {
         success: true,
-        twoFactorSessionVerified: updatedToken.twoFactorSessionVerified as boolean,
-        twoFactorMethod: updatedToken.twoFactorMethod as string | undefined
+        twoFactorSessionVerified: updatedSession.twoFactorSessionVerified as boolean,
+        twoFactorMethod: updatedSession.twoFactorMethod as string | undefined
       };
 
       return addSecurityHeaders(NextResponse.json(responseData));

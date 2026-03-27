@@ -33,7 +33,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.useSessionExpiration = useSessionExpiration;
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 /**
  * Detects stale sessions and redirects to login
  *
@@ -52,7 +52,7 @@ function useSessionExpiration({ session, router, callbackUrl = '/dashboard', onE
             }
             setTimeout(async () => {
                 // Clear the session before redirecting
-                await (0, react_2.signOut)({ redirect: false });
+                await better_auth_client_1.authClient.signOut();
                 const params = new URLSearchParams({
                     callbackUrl,
                     error: 'SessionExpired'

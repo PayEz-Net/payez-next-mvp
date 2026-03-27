@@ -29,10 +29,9 @@
  * }
  * ```
  */
-import type { Session } from 'next-auth';
 export interface UseSessionExpirationOptions {
-    /** NextAuth session object */
-    session: Session | null | undefined;
+    /** Session object */
+    session: any | null | undefined;
     /** Next.js router for navigation */
     router: {
         push: (url: string) => void;

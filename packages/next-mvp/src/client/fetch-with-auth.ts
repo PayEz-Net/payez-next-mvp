@@ -1,5 +1,5 @@
 // src/client/fetch-with-auth.ts
-import { getSession } from 'next-auth/react';
+import { authClient } from './better-auth-client';
 
 /**
  * A wrapper for the `fetch` API that automatically injects the session's
@@ -13,12 +13,12 @@ import { getSession } from 'next-auth/react';
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   // 1. Retrieve the client-side session to get the accessToken.
-  const session = await getSession();
+  const { data: session } = await authClient.getSession();
 
   // 2. Inject the accessToken into the Authorization header.
   const headers = new Headers(options.headers);
-  if (session?.accessToken) {
-    headers.set('Authorization', `Bearer ${session.accessToken}`);
+  if ((session as any)?.accessToken) {
+    headers.set('Authorization', `Bearer ${(session as any).accessToken}`);
   }
   options.headers = headers;
 
@@ -27,7 +27,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
   // 3. Handle the 401 response intelligently.
   if (response.status === 401) {
     // If we have a valid session, this is likely a claim/permission error, not an auth error
-    if (session?.accessToken) {
+    if ((session as any)?.accessToken) {
       console.warn('API returned 401 despite valid session. Likely insufficient claims or permissions.');
       // Don't redirect - let the calling code handle the error gracefully
       return response;

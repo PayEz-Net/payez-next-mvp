@@ -8,7 +8,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminAuditHandlerConfig {
-    getAuthOptions: () => Promise<any>;
 }
 /**
  * GET /api/admin/audit - List audit logs

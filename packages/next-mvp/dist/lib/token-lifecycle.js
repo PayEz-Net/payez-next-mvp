@@ -23,10 +23,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureFreshToken = ensureFreshToken;
 exports.getFreshAuthHeader = getFreshAuthHeader;
-const jwt_1 = require("next-auth/jwt");
 const session_store_1 = require("./session-store");
-const app_slug_1 = require("./app-slug");
-const idp_client_config_1 = require("./idp-client-config");
+const auth_1 = require("../server/auth");
 // 5 minute threshold for "needs refresh" - matches refresh handler pattern
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 // Concurrent refresh handling configuration
@@ -209,55 +207,19 @@ async function triggerRefresh(request, sessionToken, retryCount = 0) {
  * }
  * ```
  */
-/**
- * Get NextAuth secret from IDP config (cached).
- * NEVER use process.env.NEXTAUTH_SECRET directly - it may not be set.
- */
-async function getNextAuthSecret() {
-    const config = await (0, idp_client_config_1.getIDPClientConfig)();
-    return config.nextAuthSecret || '';
-}
 async function ensureFreshToken(request) {
     try {
-        // 1. Get NextAuth JWT to extract sessionToken
-        // Use IDP config to get the secret (same as viability.ts)
-        const secret = await getNextAuthSecret();
-        if (!secret) {
-            console.error('[TOKEN_LIFECYCLE] NEXTAUTH_SECRET not available from IDP config');
-            return { success: false, error: 'NO_SESSION', message: 'Auth not configured' };
-        }
-        const cookieName = (0, app_slug_1.getJwtCookieName)();
-        const token = await (0, jwt_1.getToken)({
-            req: request,
-            secret,
-            cookieName,
-        });
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-        const sessionTokenFromJwt = (token?.sessionToken || token?.redisSessionId);
-        if (!sessionTokenFromJwt) {
-            // Debug: log what we got including cookie presence and value info
-            const cookieHeader = request.headers.get('cookie') || '';
-            const hasCookie = cookieHeader.includes(cookieName);
-            // Extract the actual cookie value to check if it's empty
-            const cookieMatch = cookieHeader.match(new RegExp(`${cookieName}=([^;]*)`));
-            const cookieValue = cookieMatch ? cookieMatch[1] : null;
-            const cookieValueLength = cookieValue?.length || 0;
-            console.warn('[TOKEN_LIFECYCLE] NO_SESSION -', {
-                token: token ? 'exists but no sessionToken/redisSessionId' : 'null',
-                cookieName,
-                hasCookie,
-                cookieValueLength,
-                cookieValuePreview: cookieValue ? cookieValue.substring(0, 20) + '...' : 'EMPTY',
-                cookieHeaderLength: cookieHeader.length,
-                secretLength: secret.length,
-            });
+        // 1. Get Better Auth session to extract sessionToken
+        const betterAuthSession = await (0, auth_1.getSession)(request);
+        if (!betterAuthSession?.session?.token) {
+            console.warn('[TOKEN_LIFECYCLE] NO_SESSION - Better Auth session not found');
             return {
                 success: false,
                 error: 'NO_SESSION',
                 message: 'No session available',
             };
         }
-        const sessionToken = sessionTokenFromJwt;
+        const sessionToken = betterAuthSession.session.token;
         // 2. Get session data from Redis
         let sessionData = await (0, session_store_1.getSession)(sessionToken);
         if (!sessionData) {

@@ -17,7 +17,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useBranding, useColors } from '../../theme/useTheme';
@@ -57,26 +57,18 @@ function AdminLoginForm({
     setError(null);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await authClient.signIn.email({
         email,
         password,
-        redirect: false,
-        callbackUrl,
+        callbackURL: callbackUrl,
       });
 
-      if (result?.error) {
-        // Parse structured error if available
-        try {
-          const errorData = JSON.parse(result.error);
-          setError(errorData.message || errorData.error?.message || 'Invalid credentials');
-        } catch {
-          if (result.error === 'CredentialsSignin') {
-            setError('Invalid email or password');
-          } else {
-            setError(result.error);
-          }
-        }
-      } else if (result?.ok) {
+      if ((result as any)?.error) {
+        const errorMsg = typeof (result as any).error === 'object'
+          ? ((result as any).error as any).message || 'Invalid credentials'
+          : String((result as any).error);
+        setError(errorMsg);
+      } else if (result?.data) {
         // Redirect to verify-code for 2FA or directly to callback
         window.location.href = `/account-auth/verify-code?callbackUrl=${encodeURIComponent(callbackUrl)}`;
       }

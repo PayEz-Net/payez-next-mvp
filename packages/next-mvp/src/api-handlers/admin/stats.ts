@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getStartupIDPConfig } from '../../lib/startup-init';
 import { getRedis } from '../../lib/redis';
 import { ADMIN_ROLES } from '../../lib/roles';
@@ -19,9 +19,8 @@ interface VibeRequestOptions {
   body?: unknown;
 }
 
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -101,7 +100,6 @@ async function vibeServiceRequest<T = unknown>(
 }
 
 export interface AdminStatsHandlerConfig {
-  getAuthOptions: () => Promise<any>;
   appSlug?: string;
 }
 
@@ -117,7 +115,7 @@ export function createStatsHandler(config: AdminStatsHandlerConfig) {
 
   return {
     async GET(_request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(_request);
       if (adminCheck.error) return adminCheck.error;
 
       try {

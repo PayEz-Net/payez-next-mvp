@@ -6,8 +6,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TestEnvPage = TestEnvPage;
 const jsx_runtime_1 = require("react/jsx-runtime");
-const react_1 = require("next-auth/react");
-const react_2 = require("react");
+const better_auth_client_1 = require("../../client/better-auth-client");
+const react_1 = require("react");
 const link_1 = __importDefault(require("next/link"));
 /**
  * Test Environment Index Page
@@ -21,9 +21,11 @@ const link_1 = __importDefault(require("next/link"));
  * ```
  */
 function TestEnvPage() {
-    const { data: session, status } = (0, react_1.useSession)();
-    const [isDarkMode, setIsDarkMode] = (0, react_2.useState)(false);
-    (0, react_2.useEffect)(() => {
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
+    const [isDarkMode, setIsDarkMode] = (0, react_1.useState)(false);
+    (0, react_1.useEffect)(() => {
         const checkDarkMode = () => {
             const isDark = document.documentElement.classList.contains('dark') ||
                 window.matchMedia('(prefers-color-scheme: dark)').matches;

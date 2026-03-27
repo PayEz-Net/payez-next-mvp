@@ -21,9 +21,9 @@ exports.AdminLoginForm = AdminLoginForm;
 exports.AdminLoginFallback = AdminLoginFallback;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 const navigation_1 = require("next/navigation");
-const react_3 = require("react");
+const react_2 = require("react");
 const useTheme_1 = require("../../theme/useTheme");
 function AdminLoginForm({ title = 'Admin Login', subtitle = 'Authorized personnel only', callbackUrl: propCallbackUrl, logo, }) {
     const searchParams = (0, navigation_1.useSearchParams)();
@@ -40,28 +40,18 @@ function AdminLoginForm({ title = 'Admin Login', subtitle = 'Authorized personne
         setIsLoading(true);
         setError(null);
         try {
-            const result = await (0, react_2.signIn)('credentials', {
+            const result = await better_auth_client_1.authClient.signIn.email({
                 email,
                 password,
-                redirect: false,
-                callbackUrl,
+                callbackURL: callbackUrl,
             });
             if (result?.error) {
-                // Parse structured error if available
-                try {
-                    const errorData = JSON.parse(result.error);
-                    setError(errorData.message || errorData.error?.message || 'Invalid credentials');
-                }
-                catch {
-                    if (result.error === 'CredentialsSignin') {
-                        setError('Invalid email or password');
-                    }
-                    else {
-                        setError(result.error);
-                    }
-                }
+                const errorMsg = typeof result.error === 'object'
+                    ? result.error.message || 'Invalid credentials'
+                    : String(result.error);
+                setError(errorMsg);
             }
-            else if (result?.ok) {
+            else if (result?.data) {
                 // Redirect to verify-code for 2FA or directly to callback
                 window.location.href = `/account-auth/verify-code?callbackUrl=${encodeURIComponent(callbackUrl)}`;
             }
@@ -79,5 +69,5 @@ function AdminLoginFallback() {
     return ((0, jsx_runtime_1.jsx)("div", { className: "min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900", children: (0, jsx_runtime_1.jsxs)("div", { className: "text-center", children: [(0, jsx_runtime_1.jsxs)("svg", { className: "animate-spin h-10 w-10 mx-auto text-white", fill: "none", viewBox: "0 0 24 24", children: [(0, jsx_runtime_1.jsx)("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }), (0, jsx_runtime_1.jsx)("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" })] }), (0, jsx_runtime_1.jsx)("p", { className: "mt-4 text-slate-400", children: "Loading..." })] }) }));
 }
 function AdminLoginPage(props) {
-    return ((0, jsx_runtime_1.jsx)(react_3.Suspense, { fallback: (0, jsx_runtime_1.jsx)(AdminLoginFallback, {}), children: (0, jsx_runtime_1.jsx)(AdminLoginForm, { ...props }) }));
+    return ((0, jsx_runtime_1.jsx)(react_2.Suspense, { fallback: (0, jsx_runtime_1.jsx)(AdminLoginFallback, {}), children: (0, jsx_runtime_1.jsx)(AdminLoginForm, { ...props }) }));
 }

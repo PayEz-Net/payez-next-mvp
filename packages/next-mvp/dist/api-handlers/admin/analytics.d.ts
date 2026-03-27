@@ -9,7 +9,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminAnalyticsHandlerConfig {
-    getAuthOptions: () => Promise<any>;
 }
 /**
  * POST /api/admin/analytics

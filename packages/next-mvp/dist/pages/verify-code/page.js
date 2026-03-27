@@ -34,8 +34,8 @@ exports.default = VerifyCodePage;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
 const navigation_1 = require("next/navigation");
-const react_2 = require("next-auth/react");
-const react_3 = require("react");
+const better_auth_client_1 = require("../../client/better-auth-client");
+const react_2 = require("react");
 const useTheme_1 = require("../../theme/useTheme");
 /**
  * Session storage key to track that user intentionally navigated to verify-code.
@@ -46,7 +46,11 @@ function VerifyCodeForm() {
     const router = (0, navigation_1.useRouter)();
     const searchParams = (0, navigation_1.useSearchParams)();
     const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
-    const { data: session, status, update: updateSession } = (0, react_2.useSession)();
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const session = sessionData;
+    const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
+    // TODO: Better Auth session refresh
+    const updateSession = async () => { return session; };
     const colors = (0, useTheme_1.useColors)();
     const [method, setMethod] = (0, react_1.useState)(null);
     const [methodLocked, setMethodLocked] = (0, react_1.useState)(false);
@@ -122,7 +126,7 @@ function VerifyCodeForm() {
                     // Session expired - redirect to login
                     setError('Your session has expired. Redirecting to login...');
                     setTimeout(async () => {
-                        await (0, react_2.signOut)({ redirect: false });
+                        await better_auth_client_1.authClient.signOut();
                         const safeCallback = callbackUrl.startsWith('/account-auth/') ? '/dashboard' : callbackUrl;
                         router.push(`/account-auth/login?callbackUrl=${encodeURIComponent(safeCallback)}`);
                     }, 1200);
@@ -168,7 +172,7 @@ function VerifyCodeForm() {
                     if (data.valid === false || data.mfaExpired === true) {
                         setError('Your session has expired. Redirecting to login...');
                         setTimeout(async () => {
-                            await (0, react_2.signOut)({ redirect: false });
+                            await better_auth_client_1.authClient.signOut();
                             if (typeof window !== 'undefined') {
                                 sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
                             }
@@ -207,7 +211,7 @@ function VerifyCodeForm() {
                     ? 'Your 2FA session has expired. Please sign in again.'
                     : 'Your session has expired. Redirecting to login...');
                 setTimeout(async () => {
-                    await (0, react_2.signOut)({ redirect: false });
+                    await better_auth_client_1.authClient.signOut();
                     if (typeof window !== 'undefined') {
                         sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
                     }
@@ -271,7 +275,7 @@ function VerifyCodeForm() {
                     ? 'Your 2FA session has expired. Please sign in again.'
                     : 'Your session has expired. Redirecting to login...');
                 setTimeout(async () => {
-                    await (0, react_2.signOut)({ redirect: false });
+                    await better_auth_client_1.authClient.signOut();
                     if (typeof window !== 'undefined') {
                         sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
                     }
@@ -404,5 +408,5 @@ function VerifyCodePageFallback() {
     return ((0, jsx_runtime_1.jsx)("div", { className: "flex items-center justify-center py-8", style: { background: 'hsl(var(--background))' }, children: (0, jsx_runtime_1.jsxs)("div", { className: "text-center", children: [(0, jsx_runtime_1.jsxs)("svg", { className: "animate-spin h-10 w-10 mx-auto", style: { color: 'hsl(var(--primary))' }, xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", children: [(0, jsx_runtime_1.jsx)("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }), (0, jsx_runtime_1.jsx)("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" })] }), (0, jsx_runtime_1.jsx)("p", { className: "mt-4", style: { color: 'hsl(var(--muted-foreground))' }, children: "Loading..." })] }) }));
 }
 function VerifyCodePage() {
-    return ((0, jsx_runtime_1.jsx)(react_3.Suspense, { fallback: (0, jsx_runtime_1.jsx)(VerifyCodePageFallback, {}), children: (0, jsx_runtime_1.jsx)(VerifyCodeForm, {}) }));
+    return ((0, jsx_runtime_1.jsx)(react_2.Suspense, { fallback: (0, jsx_runtime_1.jsx)(VerifyCodePageFallback, {}), children: (0, jsx_runtime_1.jsx)(VerifyCodeForm, {}) }));
 }

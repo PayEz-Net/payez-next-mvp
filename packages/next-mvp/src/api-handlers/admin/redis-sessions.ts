@@ -12,21 +12,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getSession } from '../../server/auth';
 import { getRedis } from '../../lib/redis';
 import { ADMIN_ROLES, hasAnyRole } from '../../lib/roles';
 
 export interface RedisSessionsHandlerConfig {
-  getAuthOptions: () => Promise<any>;
   appSlug?: string;
 }
 
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions: () => Promise<any>): Promise<{ isAdmin: boolean; userId?: number; error?: NextResponse }> {
-  const authOptions = await getAuthOptions();
-  const session = await getServerSession(authOptions) as any;
+async function checkAdminRole(request: NextRequest): Promise<{ isAdmin: boolean; userId?: number; error?: NextResponse }> {
+  const session = await getSession(request) as any;
 
   if (!session?.user) {
     return {
@@ -66,7 +64,7 @@ export function createRedisSessionsHandler(config: RedisSessionsHandlerConfig) {
 
   return {
     async GET(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       try {
@@ -140,7 +138,7 @@ export function createRedisSessionsHandler(config: RedisSessionsHandlerConfig) {
     },
 
     async DELETE(request: NextRequest) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       try {
@@ -196,7 +194,7 @@ export function createRedisSessionRevokeHandler(config: RedisSessionsHandlerConf
 
   return {
     async POST(request: NextRequest, { params }: { params: { sessionId: string } }) {
-      const adminCheck = await checkAdminRole(config.getAuthOptions);
+      const adminCheck = await checkAdminRole(request);
       if (adminCheck.error) return adminCheck.error;
 
       try {

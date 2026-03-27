@@ -36,7 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.useViabilitySession = useViabilitySession;
 exports.useIsAuthenticated = useIsAuthenticated;
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 function getGlobalState() {
     if (typeof window === 'undefined') {
         // SSR - return default state
@@ -169,7 +169,8 @@ function stopPolling() {
  */
 function useViabilitySession(options = {}) {
     const { pollInterval = 30000, enablePolling = true, onSessionInvalid } = options;
-    const { status: nextAuthStatus } = (0, react_2.useSession)();
+    const { data: _sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const nextAuthStatus = isPending ? 'loading' : _sessionData ? 'authenticated' : 'unauthenticated';
     const [, forceUpdate] = (0, react_1.useState)(0);
     const mountedRef = (0, react_1.useRef)(true);
     const initializedRef = (0, react_1.useRef)(false);

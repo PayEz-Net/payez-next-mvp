@@ -15,10 +15,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getSession as getBetterAuthSession } from '../../server/auth';
 import { getSession, updateSession, acquireRefreshLock, releaseRefreshLock, checkRefreshLock } from '../../lib/session-store';
 import { computeTokenExpiries } from '../../lib/token-expiry';
-import { getJwtCookieName } from '../../lib/app-slug';
 import { extractKidFromToken } from '../../auth/utils/token-utils';
 
 interface RefreshConfig {
@@ -52,12 +51,11 @@ export function createRefreshHandler(config: RefreshConfig) {
 
   return async function POST(req: NextRequest) {
     try {
-      // Extract session token from NextAuth JWT
-      const token = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
+      // Extract session from Better Auth
+      const betterAuthSession = await getBetterAuthSession(req);
 
-      // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-      let sessionToken = (token?.sessionToken || token?.redisSessionId) as string | undefined;
-      let userId = token?.sub;
+      let sessionToken = (betterAuthSession?.session?.token) as string | undefined;
+      let userId = betterAuthSession?.user?.id;
 
       if (!sessionToken) {
         // Fallback: check for session token in header (for internal server-to-server calls)

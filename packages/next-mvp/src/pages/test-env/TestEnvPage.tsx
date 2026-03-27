@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -16,7 +16,9 @@ import Link from 'next/link';
  * ```
  */
 export function TestEnvPage() {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {

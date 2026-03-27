@@ -44,15 +44,14 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createSessionsHandler = createSessionsHandler;
 const server_1 = require("next/server");
-const next_auth_1 = require("next-auth");
+const auth_1 = require("../../server/auth");
 const startup_init_1 = require("../../lib/startup-init");
 const roles_1 = require("../../lib/roles");
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions) {
-    const authOptions = await getAuthOptions();
-    const session = await (0, next_auth_1.getServerSession)(authOptions);
+async function checkAdminRole(request) {
+    const session = await (0, auth_1.getSession)(request);
     if (!session?.user) {
         return {
             isAdmin: false,
@@ -138,7 +137,7 @@ function getCountryFlag(countryCode) {
 function createSessionsHandler(config) {
     return {
         async GET(request) {
-            const adminCheck = await checkAdminRole(config.getAuthOptions);
+            const adminCheck = await checkAdminRole(request);
             if (adminCheck.error)
                 return adminCheck.error;
             const { searchParams } = new URL(request.url);
@@ -193,7 +192,7 @@ function createSessionsHandler(config) {
             return server_1.NextResponse.json({ sessions });
         },
         async POST(request) {
-            const adminCheck = await checkAdminRole(config.getAuthOptions);
+            const adminCheck = await checkAdminRole(request);
             if (adminCheck.error)
                 return adminCheck.error;
             const body = await request.json();

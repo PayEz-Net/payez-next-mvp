@@ -17,18 +17,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GET = GET;
 exports.POST = POST;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
+const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
-const app_slug_1 = require("../../lib/app-slug");
-const idp_client_config_1 = require("../../lib/idp-client-config");
-/**
- * Get NextAuth secret from IDP config (cached).
- * NEVER use process.env.NEXTAUTH_SECRET - it's always loaded from IDP.
- */
-async function getNextAuthSecret() {
-    const config = await (0, idp_client_config_1.getIDPClientConfig)();
-    return config.nextAuthSecret || '';
-}
 /**
  * GET /api/auth/session - Check current session status
  *
@@ -39,30 +29,18 @@ async function getNextAuthSecret() {
  */
 async function GET(req) {
     try {
-        const secret = await getNextAuthSecret();
-        const cookieName = (0, app_slug_1.getJwtCookieName)();
-        // Debug logging
-        const cookieValue = req.cookies.get(cookieName)?.value;
-        console.log('[SESSION_ROUTE] GET called:', {
-            cookieName,
-            hasCookie: !!cookieValue,
-            cookieLength: cookieValue?.length || 0,
-            secretLength: secret?.length || 0,
-        });
-        const token = await (0, jwt_1.getToken)({ req, secret, cookieName });
-        if (!token) {
-            console.warn('[SESSION_ROUTE] getToken returned null');
-            // MUST return empty {} — NextAuth's useSession() treats any non-empty
+        const authSession = await (0, auth_1.getSession)(req);
+        if (!authSession) {
+            console.warn('[SESSION_ROUTE] Better Auth session not found');
+            // MUST return empty {} — useSession() treats any non-empty
             // response object as "authenticated", causing redirect loops on login page.
             return server_1.NextResponse.json({});
         }
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-        const redisSessionId = token.sessionToken || token.redisSessionId;
-        console.log('[SESSION_ROUTE] Token found:', {
-            sub: token.sub,
-            email: token.email,
-            name: token.name,
-            hasExp: !!token.exp,
+        const redisSessionId = authSession.session?.token;
+        console.log('[SESSION_ROUTE] Session found:', {
+            userId: authSession.user?.id,
+            email: authSession.user?.email,
+            name: authSession.user?.name,
             redisSessionId: redisSessionId ? redisSessionId.substring(0, 8) + '...' : 'MISSING',
         });
         // Fetch full session data from Redis
@@ -73,15 +51,15 @@ async function GET(req) {
             roles: session?.roles,
             hasAccessToken: !!session?.idpAccessToken,
         });
-        // Return NextAuth-compatible session format with Redis data
+        // Return session format with Redis data
         // useSession() expects: { user: {...}, expires: "..." }
         // We enrich with all session data from Redis
         return server_1.NextResponse.json({
             user: {
-                id: session?.userId || token.sub,
-                email: session?.email || token.email,
-                name: session?.name || token.name,
-                image: token.picture || null,
+                id: session?.userId || authSession.user?.id,
+                email: session?.email || authSession.user?.email,
+                name: session?.name || authSession.user?.name,
+                image: authSession.user?.image || null,
                 // Redis session data
                 roles: session?.roles || [],
                 twoFactorSessionVerified: session?.mfaVerified || false,
@@ -100,7 +78,9 @@ async function GET(req) {
             accessToken: session?.idpAccessToken,
             refreshToken: session?.idpRefreshToken,
             accessTokenExpires: session?.idpAccessTokenExpires,
-            expires: token.exp ? new Date(token.exp * 1000).toISOString() : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            expires: authSession.session?.expiresAt
+                ? new Date(authSession.session.expiresAt).toISOString()
+                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
     }
     catch (error) {
@@ -122,16 +102,14 @@ async function GET(req) {
  */
 async function POST(req) {
     try {
-        const secret = await getNextAuthSecret();
-        const token = await (0, jwt_1.getToken)({ req, secret, cookieName: (0, app_slug_1.getJwtCookieName)() });
-        if (!token) {
+        const authSession = await (0, auth_1.getSession)(req);
+        if (!authSession) {
             return server_1.NextResponse.json({
                 error: 'No session found',
                 code: 'UNAUTHORIZED'
             }, { status: 401 });
         }
-        // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-        const sessionToken = token.sessionToken || token.redisSessionId;
+        const sessionToken = authSession.session?.token;
         if (!sessionToken) {
             return server_1.NextResponse.json({
                 error: 'Invalid session',
@@ -140,7 +118,7 @@ async function POST(req) {
         }
         const body = await req.json();
         const { metadata, access_token, refresh_token, twoFactorComplete, twoFactorMethod } = body;
-        // Get current session
+        // Get current session from Redis
         const session = await (0, session_store_1.getSession)(sessionToken);
         if (!session) {
             return server_1.NextResponse.json({

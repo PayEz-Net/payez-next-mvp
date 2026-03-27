@@ -2,7 +2,6 @@
  * Token Utilities
  *
  * JWT decoding and expiry checking utilities.
- * Extracted from auth-options.ts for clarity.
  *
  * @version 1.0.0
  * @since auth-refactor-2026-01

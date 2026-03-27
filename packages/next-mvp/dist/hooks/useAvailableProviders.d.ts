@@ -4,14 +4,12 @@
  * Fetches the list of OAuth providers actually configured in NextAuth.
  * This ensures UI only shows buttons for providers that are enabled in IDP.
  */
-import { LiteralUnion, ClientSafeProvider } from 'next-auth/react';
-import { BuiltInProviderType } from 'next-auth/providers/index';
 import type { FederatedProvider } from '../types/auth';
 export interface UseAvailableProvidersResult {
     providers: FederatedProvider[];
     isLoading: boolean;
     error: Error | null;
-    rawProviders: Record<LiteralUnion<BuiltInProviderType>, ClientSafeProvider> | null;
+    rawProviders: Record<string, any> | null;
 }
 /**
  * Hook to get available OAuth providers from NextAuth.

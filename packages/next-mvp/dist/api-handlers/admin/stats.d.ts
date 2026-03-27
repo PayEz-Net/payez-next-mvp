@@ -9,7 +9,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminStatsHandlerConfig {
-    getAuthOptions: () => Promise<any>;
     appSlug?: string;
 }
 /**

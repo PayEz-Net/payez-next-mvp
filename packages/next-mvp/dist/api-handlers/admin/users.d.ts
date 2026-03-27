@@ -8,7 +8,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminUsersHandlerConfig {
-    getAuthOptions: () => Promise<any>;
 }
 /**
  * GET /api/admin/users - List users

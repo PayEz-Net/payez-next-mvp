@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 interface VerifyCodeConfig {
-    nextAuthSecret: string;
+    nextAuthSecret?: string;
 }
 /**
  * Creates a verify-code/complete-2FA handler for Next.js API routes

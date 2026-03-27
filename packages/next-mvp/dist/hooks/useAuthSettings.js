@@ -18,7 +18,7 @@ exports.useRequires2FA = useRequires2FA;
 exports.useAllowed2FAMethods = useAllowed2FAMethods;
 exports.useSessionTimeouts = useSessionTimeouts;
 exports.useRememberMeSettings = useRememberMeSettings;
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 /**
  * Hook to access auth settings from the session.
  *
@@ -41,7 +41,7 @@ const react_1 = require("next-auth/react");
  * ```
  */
 function useAuthSettings() {
-    const { data: session } = (0, react_1.useSession)();
+    const { data: session } = better_auth_client_1.authClient.useSession();
     if (!session) {
         return null;
     }

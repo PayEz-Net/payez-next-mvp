@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
@@ -50,7 +50,9 @@ export function VibeAdminLayout({
   isDarkMode: isDarkModeProp,
   adminRole = 'vibe_app_admin',
 }: VibeAdminLayoutProps) {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const router = useRouter();
   const adminConfig = useVibeAdmin();
   

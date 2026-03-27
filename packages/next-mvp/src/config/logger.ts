@@ -45,7 +45,7 @@ const createLogger = (): any => {
 };
 
 let logger: any;
-if (!globalThis.process?.browser) {
+if (!(globalThis.process as any)?.browser) {
   logger = createLogger();
   addConfigWatcher((updatedConfig) => { loggingConfig = updatedConfig; if (logger && logger.level !== undefined) { logger.level = loggingConfig.logLevel; } });
 } else { logger = console; }

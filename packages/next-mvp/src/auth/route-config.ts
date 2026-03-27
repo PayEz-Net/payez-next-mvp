@@ -65,7 +65,7 @@ const defaultUnauthenticatedRoutes: UnauthenticatedRouteConfig[] = [
   },
   {
     pattern: '/api/auth/*',
-    description: 'NextAuth.js authentication API endpoints',
+    description: 'Authentication API endpoints',
     allowDuringCircuitBreakerOpen: true,
     requiresRateLimit: true
   },
@@ -108,7 +108,7 @@ let configuredRoutes: UnauthenticatedRouteConfig[] = [...defaultUnauthenticatedR
 const default2FABypassRoutes: ProtectedRouteConfig[] = [
   {
     pattern: '/api/auth/*',
-    description: 'NextAuth.js API routes - must be accessible during 2FA flow for session management',
+    description: 'Auth API routes - must be accessible during 2FA flow for session management',
     twoFactorRequirements: TwoFactorPresets.NONE
   },
   {

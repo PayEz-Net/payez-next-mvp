@@ -9,7 +9,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface AdminSessionsHandlerConfig {
-    getAuthOptions: () => Promise<any>;
 }
 /**
  * GET /api/admin/sessions - List sessions

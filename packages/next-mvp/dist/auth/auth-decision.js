@@ -121,7 +121,7 @@ function makeAuthDecision(context) {
         console.log('[MIDDLEWARE-DECISION] Protected route with incomplete 2FA, allowing middleware to handle');
         return { type: 'allow' };
     }
-    // Token expired - redirect to login (let NextAuth handle refresh)
+    // Token expired - redirect to login
     if (sessionPointer.expired) {
         if (isLoginPage) {
             return { type: 'allow' };

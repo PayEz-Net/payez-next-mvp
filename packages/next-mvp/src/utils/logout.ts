@@ -7,7 +7,7 @@
  * - No external dependencies
  */
 
-import { signOut } from 'next-auth/react';
+import { authClient } from '../client/better-auth-client';
 
 /**
  * Sign out the current user and redirect to login
@@ -16,10 +16,10 @@ import { signOut } from 'next-auth/react';
  */
 export async function logout(redirectUrl: string = '/account-auth/login'): Promise<void> {
   try {
-    await signOut({
-      callbackUrl: redirectUrl,
-      redirect: true,
-    });
+    await authClient.signOut();
+    if (typeof window !== 'undefined') {
+      window.location.href = redirectUrl;
+    }
   } catch (error) {
     console.error('Logout error:', error);
     // Fallback: force redirect to login

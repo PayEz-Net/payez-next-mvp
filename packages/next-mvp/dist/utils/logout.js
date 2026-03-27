@@ -9,7 +9,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logout = logout;
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
 /**
  * Sign out the current user and redirect to login
  *
@@ -17,10 +17,10 @@ const react_1 = require("next-auth/react");
  */
 async function logout(redirectUrl = '/account-auth/login') {
     try {
-        await (0, react_1.signOut)({
-            callbackUrl: redirectUrl,
-            redirect: true,
-        });
+        await better_auth_client_1.authClient.signOut();
+        if (typeof window !== 'undefined') {
+            window.location.href = redirectUrl;
+        }
     }
     catch (error) {
         console.error('Logout error:', error);

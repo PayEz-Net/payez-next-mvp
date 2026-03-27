@@ -15,7 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getSession } from '../../server/auth';
 import { deleteSession } from '../../lib/session-store';
 import {
   getSessionCookieName,
@@ -23,23 +23,8 @@ import {
   getCsrfCookieName,
   getSecureCsrfCookieName,
   getCallbackUrlCookieName,
-  getJwtCookieName
 } from '../../lib/app-slug';
-import { getIDPClientConfig } from '../../lib/idp-client-config';
 import { siteEvents, getClientIp } from '../../lib/site-logger';
-
-async function getConfig() {
-  const idpConfig = await getIDPClientConfig();
-  const idpBaseUrl = process.env.IDP_URL;
-  if (!idpBaseUrl) {
-    throw new Error('[IDP_URL] FATAL: IDP_URL environment variable is REQUIRED.');
-  }
-  return {
-    nextAuthSecret: idpConfig.nextAuthSecret || '',
-    idpBaseUrl,
-    clientId: process.env.CLIENT_ID || process.env.NEXT_PUBLIC_IDP_CLIENT_ID || '',
-  };
-}
 
 /**
  * POST /api/auth/logout - Sign out and clean up session
@@ -47,15 +32,13 @@ async function getConfig() {
  * Performs complete logout:
  * 1. Revokes tokens at IDP (if refresh token available)
  * 2. Deletes session from store
- * 3. Clears NextAuth session cookie
+ * 3. Clears session cookies
  */
 export async function POST(req: NextRequest) {
-  const { nextAuthSecret, idpBaseUrl, clientId } = await getConfig();
-
   try {
-    const token = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
+    const session = await getSession(req);
 
-    if (!token) {
+    if (!session) {
       // Already logged out
       return NextResponse.json({
         success: true,
@@ -63,8 +46,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-    const sessionId = (token as any).sessionToken || (token as any).redisSessionId;
+    const sessionId = session.session?.token;
 
     // Delete session from store (this also removes the refresh token)
     if (sessionId) {
@@ -77,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log logout event (fire-and-forget)
-    const userId = (token as any).sub || (token as any).idpUserId;
+    const userId = session.user?.id;
     if (userId) {
       siteEvents.logout({
         user_id: userId,
@@ -89,7 +71,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Build response that clears NextAuth cookies
+    // Build response that clears session cookies
     const response = NextResponse.json({
       success: true,
       message: 'Logged out successfully'

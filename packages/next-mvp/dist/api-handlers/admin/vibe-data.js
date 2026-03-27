@@ -50,15 +50,14 @@ exports.createUpdateRecordHandler = createUpdateRecordHandler;
 exports.createDeleteRecordHandler = createDeleteRecordHandler;
 exports.createQueryHandler = createQueryHandler;
 const server_1 = require("next/server");
-const next_auth_1 = require("next-auth");
+const auth_1 = require("../../server/auth");
 const startup_init_1 = require("../../lib/startup-init");
 const roles_1 = require("../../lib/roles");
 /**
  * Check if the current user has admin role
  */
-async function checkAdminRole(getAuthOptions) {
-    const authOptions = await getAuthOptions();
-    const session = await (0, next_auth_1.getServerSession)(authOptions);
+async function checkAdminRole(request) {
+    const session = await (0, auth_1.getSession)(request);
     if (!session?.user) {
         return {
             isAdmin: false,
@@ -138,7 +137,7 @@ async function vibeServiceRequest(endpoint, options) {
  */
 function createGetCollectionsHandler(config) {
     return async function GET(request) {
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const result = await vibeServiceRequest('/v1/collections', { method: 'GET' });
@@ -155,7 +154,7 @@ function createGetCollectionsHandler(config) {
 function createGetTablesHandler(config) {
     return async function GET(request, { params }) {
         const { collection } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const result = await vibeServiceRequest(`/v1/collections/${collection}/tables`, { method: 'GET' });
@@ -172,7 +171,7 @@ function createGetTablesHandler(config) {
 function createGetTableDataHandler(config) {
     return async function GET(request, { params }) {
         const { collection, table } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const searchParams = request.nextUrl.searchParams.toString();
@@ -195,7 +194,7 @@ function createGetTableDataHandler(config) {
 function createGetRecordHandler(config) {
     return async function GET(request, { params }) {
         const { collection, table, id } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const endpoint = `/v1/collections/${collection}/tables/${table}/${id}`;
@@ -214,7 +213,7 @@ function createGetRecordHandler(config) {
 function createUpdateRecordHandler(config) {
     return async function PUT(request, { params }) {
         const { collection, table, id } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const body = await request.json();
@@ -233,7 +232,7 @@ function createUpdateRecordHandler(config) {
 function createDeleteRecordHandler(config) {
     return async function DELETE(request, { params }) {
         const { collection, table, id } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const endpoint = `/v1/collections/${collection}/tables/${table}/${id}`;
@@ -251,7 +250,7 @@ function createDeleteRecordHandler(config) {
 function createQueryHandler(config) {
     return async function POST(request, { params }) {
         const { collection, table } = await params;
-        const adminCheck = await checkAdminRole(config.getAuthOptions);
+        const adminCheck = await checkAdminRole(request);
         if (adminCheck.error)
             return adminCheck.error;
         const body = await request.json();

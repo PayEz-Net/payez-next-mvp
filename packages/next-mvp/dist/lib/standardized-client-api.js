@@ -47,7 +47,12 @@ exports.extractApiItems = extractApiItems;
 // It will BREAK if APIs don't return the expected structure
 // NO MORE GUESSING data.data.data.data - EVER AGAIN!
 // ========================================================================================
-const react_1 = require("next-auth/react");
+const better_auth_client_1 = require("../client/better-auth-client");
+/** Unwrap Better Auth getSession() to a flat session-like object for backward compat */
+async function getSession() {
+    const { data } = await better_auth_client_1.authClient.getSession();
+    return data ?? null;
+}
 const api_responses_1 = require("./types/api-responses");
 // ========================================================================================
 // CLIENT API ERROR TYPES
@@ -204,7 +209,7 @@ class StandardizedClientApiService {
         const fullEndpoint = `${this.baseUrl}${endpoint}`;
         try {
             // Use provided token or get from NextAuth session
-            const currentSession = await (0, react_1.getSession)();
+            const currentSession = await getSession();
             let token = sessionToken || currentSession?.accessToken;
             // Preflight freshness check: if token is near expiry, coordinate refresh BEFORE making request
             const pre2FA = isPreTwoFactorSession(currentSession);
@@ -248,7 +253,7 @@ class StandardizedClientApiService {
                             })().finally(() => { refreshInFlight = null; });
                         }
                         await refreshInFlight;
-                        const newSessionAfter = await (0, react_1.getSession)();
+                        const newSessionAfter = await getSession();
                         token = newSessionAfter?.accessToken || token;
                     }
                 }
@@ -391,7 +396,7 @@ class StandardizedClientApiService {
                 if (response.status === 401) {
                     console.log('🔑 Got 401, checking if we have a session to refresh...');
                     // CRITICAL FIX: Check if we actually have a session before attempting refresh
-                    const currentSession = await (0, react_1.getSession)();
+                    const currentSession = await getSession();
                     if (!currentSession || !currentSession.accessToken) {
                         console.log('🚫 No valid session found, redirecting to login instead of refresh');
                         scheduleLoginRedirect(true); // Immediate redirect
@@ -451,7 +456,7 @@ class StandardizedClientApiService {
                     }
                     console.log('🔁 Retrying original request after coordinated refresh...');
                     // Get the new session and retry the original request
-                    const newSession = await (0, react_1.getSession)();
+                    const newSession = await getSession();
                     const newToken = newSession?.accessToken;
                     const retryConfig = {
                         ...options,

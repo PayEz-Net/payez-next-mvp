@@ -45,7 +45,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -122,7 +122,9 @@ export function ClientSiteAdminPage({
   backUrl = '/',
   backLabel = 'Back to Site',
 }: ClientSiteAdminProps) {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const router = useRouter();
 
   // Theme detection

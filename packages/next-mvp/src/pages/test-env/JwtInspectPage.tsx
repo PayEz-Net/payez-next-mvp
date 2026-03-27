@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { authClient } from '../../client/better-auth-client';
 import { useState, useEffect } from 'react';
 
 // Decode JWT header (contains kid, alg, typ)
@@ -42,7 +42,9 @@ function decodeJwtPayload(token: string): any {
  * ```
  */
 export function JwtInspectPage() {
-  const { data: session, status } = useSession();
+  const { data: sessionData, isPending } = authClient.useSession();
+  const session = sessionData;
+  const status = isPending ? 'loading' : session ? 'authenticated' : 'unauthenticated';
   const [copied, setCopied] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [jwtHeader, setJwtHeader] = useState<any>(null);
@@ -319,7 +321,7 @@ export function JwtInspectPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <InfoRow
               label="Session Expires"
-              value={session?.expires ? new Date(session.expires).toISOString() : undefined}
+              value={(session as any)?.expires ? new Date((session as any).expires).toISOString() : undefined}
               labelClass={labelClass}
               valueClass={valueClass}
             />

@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { deleteSession } from '../../lib/session-store';
-import { getToken } from 'next-auth/jwt';
+import { getSession } from '../../server/auth';
 import {
   getSessionCookieName,
   getSecureSessionCookieName,
@@ -116,13 +116,12 @@ export function createSignoutHandler(config: SignoutConfig) {
     // Decode NextAuth JWT to extract the Redis session UUID before deletion
     let redisSessionToken: string | null = null;
 
-    // First attempt: NextAuth getToken (verified + robust in most cases)
-    // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
+    // First attempt: Better Auth getSession
     try {
-      const token = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
-      redisSessionToken = (token as any)?.sessionToken || (token as any)?.redisSessionId || null;
+      const betterAuthSession = await getSession(req);
+      redisSessionToken = betterAuthSession?.session?.token || null;
     } catch (e) {
-      console.warn('[SIGNOUT] getToken() failed to extract session token (will try manual decode)');
+      console.warn('[SIGNOUT] getSession() failed to extract session token (will try manual decode)');
     }
 
     // Second attempt: manual decode of the session cookie JWT (no verification)

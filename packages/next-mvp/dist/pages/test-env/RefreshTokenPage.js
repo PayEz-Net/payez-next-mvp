@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RefreshTokenPage = RefreshTokenPage;
 const jsx_runtime_1 = require("react/jsx-runtime");
 const react_1 = require("react");
-const react_2 = require("next-auth/react");
+const better_auth_client_1 = require("../../client/better-auth-client");
 /**
  * Refresh Token Test Page
  *
@@ -19,7 +19,9 @@ const react_2 = require("next-auth/react");
  * ```
  */
 function RefreshTokenPage() {
-    const { data: session, update } = (0, react_2.useSession)();
+    const { data: session } = better_auth_client_1.authClient.useSession();
+    // TODO: Better Auth session refresh
+    const update = async () => { };
     const [result, setResult] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(false);
     const [sessionDetails, setSessionDetails] = (0, react_1.useState)(null);

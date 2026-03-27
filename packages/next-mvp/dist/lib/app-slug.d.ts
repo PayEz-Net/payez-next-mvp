@@ -37,7 +37,7 @@ export declare function getRefreshLockPrefix(): string;
  * THE session cookie name - SINGLE SOURCE OF TRUTH.
  *
  * This is used by:
- * - auth-options.ts (cookies.sessionToken.name)
+ * - better-auth.ts (cookies.sessionToken.name)
  * - getToken() calls (cookieName parameter)
  * - getJwtCookieName() (alias for consistency)
  *
@@ -47,7 +47,7 @@ export declare function getSessionCookieName(): string;
 /**
  * Gets the JWT cookie name for getToken() calls.
  *
- * CRITICAL: This MUST match what auth-options.ts configures:
+ * CRITICAL: This MUST match what the auth config sets:
  * - Production: __Secure-{slug}.session-token
  * - Development: {slug}.session-token
  *
@@ -55,7 +55,7 @@ export declare function getSessionCookieName(): string;
  */
 export declare function getJwtCookieName(): string;
 /**
- * Validates that cookie names are consistent with auth-options.ts.
+ * Validates that cookie names are consistent with the auth config.
  * Call this at startup to catch mismatches early.
  */
 export declare function validateCookieNameConsistency(): void;
@@ -64,7 +64,7 @@ export declare function validateCookieNameConsistency(): void;
  *
  * WARNING: This is ONLY for clearing cookies during logout.
  * DO NOT use this for reading cookies - use getSessionCookieName().
- * NextAuth does NOT automatically use this prefix.
+ * Auth does NOT automatically use this prefix.
  *
  * Format: __Secure-{slug}.session-token
  */

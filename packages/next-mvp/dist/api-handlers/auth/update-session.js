@@ -13,8 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = void 0;
 exports.createUpdateSessionHandler = createUpdateSessionHandler;
 const server_1 = require("next/server");
-const jwt_1 = require("next-auth/jwt");
-const app_slug_1 = require("../../lib/app-slug");
+const auth_1 = require("../../server/auth");
 // Add protection headers to all responses
 function addSecurityHeaders(response) {
     response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';");
@@ -57,26 +56,25 @@ function createUpdateSessionHandler(config) {
                 return addSecurityHeaders(server_1.NextResponse.json({ error: 'Invalid JSON format' }, { status: 400 }));
             }
             const { twoFactorSessionVerified, twoFactorMethod } = body;
-            // Get the current token
-            const token = await (0, jwt_1.getToken)({ req, secret: nextAuthSecret, cookieName: (0, app_slug_1.getJwtCookieName)() });
-            if (!token) {
+            // Get the current session from Better Auth
+            const session = await (0, auth_1.getSession)(req);
+            if (!session) {
                 return addSecurityHeaders(server_1.NextResponse.json({ error: 'No session token available' }, { status: 401 }));
             }
-            // Update the token with 2FA challenge completion status
-            const updatedToken = {
-                ...token,
+            // Update the session with 2FA challenge completion status
+            const updatedSession = {
                 twoFactorSessionVerified: !!twoFactorSessionVerified,
-                twoFactorMethod: twoFactorMethod || token.twoFactorMethod
+                twoFactorMethod: twoFactorMethod || session.twoFactorMethod
             };
             console.info('[UPDATE-SESSION] Session updated successfully', {
-                userId: token.sub,
-                twoFactorSessionVerified: updatedToken.twoFactorSessionVerified,
-                twoFactorMethod: updatedToken.twoFactorMethod
+                userId: session.user?.id,
+                twoFactorSessionVerified: updatedSession.twoFactorSessionVerified,
+                twoFactorMethod: updatedSession.twoFactorMethod
             });
             const responseData = {
                 success: true,
-                twoFactorSessionVerified: updatedToken.twoFactorSessionVerified,
-                twoFactorMethod: updatedToken.twoFactorMethod
+                twoFactorSessionVerified: updatedSession.twoFactorSessionVerified,
+                twoFactorMethod: updatedSession.twoFactorMethod
             };
             return addSecurityHeaders(server_1.NextResponse.json(responseData));
         }

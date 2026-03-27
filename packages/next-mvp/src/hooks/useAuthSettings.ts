@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { authClient } from '../client/better-auth-client';
 import type { AuthSettings } from '../lib/idp-client-config';
 
 /**
@@ -39,7 +39,7 @@ interface SessionWithAuthSettings {
  * ```
  */
 export function useAuthSettings(): AuthSettings | null {
-    const { data: session } = useSession();
+    const { data: session } = authClient.useSession();
 
     if (!session) {
         return null;

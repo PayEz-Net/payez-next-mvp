@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken, JWT } from 'next-auth/jwt';
+import { getSession as getBetterAuthSession } from '../server/auth';
 import { nanoid } from 'nanoid';
 import {
   getSession,
@@ -24,10 +24,10 @@ import {
   checkRefreshLock,
   type SessionData
 } from '../lib/session-store';
-import { getJwtCookieName } from '../lib/app-slug';
+
 
 export interface AuthContext {
-  token: JWT;
+  token: any;
   accessToken: string;
   userId: string;
   sessionToken: string;
@@ -369,19 +369,20 @@ export function createAuthHandler(options: AuthHandlerOptions = {}) {
   return {
     handle: (handler: HandlerFunction) => {
       return async (req: NextRequest, context: any = {}) => {
-        // Extract token from NextAuth
-        const token = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
+        // Extract session from Better Auth
+        const betterAuthSession = await getBetterAuthSession(req);
+        const token = betterAuthSession ? { ...betterAuthSession.user, ...betterAuthSession.session } as any : null;
 
         // Check if auth is required
-        if (requireAuth && !token) {
+        if (requireAuth && !betterAuthSession) {
           return NextResponse.json(
             { error: 'Authentication required', code: 'UNAUTHORIZED' },
             { status: 401 }
           );
         }
 
-        // If no token and auth not required, call handler without auth context
-        if (!token) {
+        // If no session and auth not required, call handler without auth context
+        if (!betterAuthSession) {
           return handler(req, context, null as any);
         }
 
@@ -432,8 +433,8 @@ export function createAuthHandler(options: AuthHandlerOptions = {}) {
         let authContext: AuthContext = {
           token,
           accessToken: (token as any).accessToken || '',
-          userId: token.sub || (token as any).userId || '',
-          sessionToken: (token as any).redisSessionId || '',
+          userId: betterAuthSession.user?.id || (token as any).userId || '',
+          sessionToken: betterAuthSession.session?.token || '',
           refreshToken: (token as any).refreshToken,
         };
 

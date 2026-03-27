@@ -1,8 +1,7 @@
 /**
- * Better Auth Configuration (Phase 1 — parallel install)
+ * Better Auth Configuration
  *
- * NOT wired to routes yet. Exists alongside auth-options.ts for testing.
- * Wired in Phase 2 behind USE_BETTER_AUTH flag.
+ * Primary auth configuration. Replaces the former NextAuth auth-options.ts.
  *
  * Architecture: No database adapter — Better Auth runs in stateless mode
  * with JWE cookie cache. User management stays on IDP, sessions on Redis.
@@ -28,7 +27,6 @@ export interface BetterAuthSocialProvider {
 
 /**
  * Build Better Auth social providers from IDP config.
- * Replaces buildOAuthProviders() from providers/oauth.ts.
  */
 export function buildBetterAuthProviders(
   config: IDPClientConfig
@@ -120,7 +118,7 @@ async function getBetterAuthInstance() {
  * Get flag-gated auth handler for Next.js route.
  *
  * When USE_BETTER_AUTH=true, returns Better Auth handlers.
- * Otherwise returns null (caller uses NextAuth).
+ * Otherwise returns null (auth disabled).
  *
  * Usage in host app route:
  * ```ts
@@ -129,7 +127,6 @@ async function getBetterAuthInstance() {
  * export async function GET(req: Request) {
  *   const ba = await getBetterAuthHandler();
  *   if (ba) return ba.GET(req);
- *   // ... existing NextAuth handler
  * }
  * ```
  */

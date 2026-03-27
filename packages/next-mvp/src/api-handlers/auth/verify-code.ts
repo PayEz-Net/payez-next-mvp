@@ -10,9 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getSession } from '../../server/auth';
 import { updateTokens, mark2FAComplete } from '../../lib/session-store';
-import { getJwtCookieName } from '../../lib/app-slug';
 
 interface VerifyCodeRequest {
   accessToken: string;
@@ -22,7 +21,7 @@ interface VerifyCodeRequest {
 }
 
 interface VerifyCodeConfig {
-  nextAuthSecret: string;
+  nextAuthSecret?: string; // Legacy - no longer used by Better Auth
 }
 
 /**
@@ -59,17 +58,14 @@ export function createVerifyCodeHandler(config: VerifyCodeConfig) {
 
       const { accessToken, refreshToken, accessTokenExpires, refreshTokenExpires } = body;
 
-      // Get current session token from JWT
-      let token: any = await getToken({ req, secret: nextAuthSecret, cookieName: getJwtCookieName() });
+      // Get current session from Better Auth
+      const betterAuthSession = await getSession(req);
 
-      // The sessionToken is stored in the JWT token object
-      // Support both field names: sessionToken (auth.ts JWT) and redisSessionId (legacy)
-      const sessionToken = (token?.sessionToken || token?.redisSessionId) as string;
+      const sessionToken = betterAuthSession?.session?.token as string;
 
       if (!sessionToken) {
-        console.error('[VERIFY-CODE] No session token found in JWT', {
-          hasToken: !!token,
-          tokenKeys: token ? Object.keys(token) : []
+        console.error('[VERIFY-CODE] No session token found', {
+          hasSession: !!betterAuthSession,
         });
         return NextResponse.json(
           { success: false, message: 'No session found' },
@@ -79,7 +75,7 @@ export function createVerifyCodeHandler(config: VerifyCodeConfig) {
 
       console.info('[VERIFY-CODE] Updating session with new tokens after 2FA', {
         sessionToken: sessionToken.substring(0, 8) + '...',
-        userId: token?.sub,
+        userId: betterAuthSession?.user?.id,
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
         accessTokenLength: accessToken?.length,
@@ -100,7 +96,7 @@ export function createVerifyCodeHandler(config: VerifyCodeConfig) {
 
       console.info('[VERIFY-CODE] 2FA completion successful', {
         sessionToken: sessionToken.substring(0, 8) + '...',
-        userId: token?.sub
+        userId: betterAuthSession?.user?.id
       });
 
       return NextResponse.json({

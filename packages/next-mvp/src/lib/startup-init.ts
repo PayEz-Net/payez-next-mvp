@@ -129,12 +129,8 @@ async function performInitialization(): Promise<void> {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('[STARTUP] IDP config fetch failed:', errorMsg);
 
-      // Fall back to legacy secret resolution
-      console.log('[STARTUP] Falling back to legacy NEXTAUTH_SECRET resolution...');
-      const { resolveNextAuthSecret } = await import('./nextauth-secret');
-      const secret = await resolveNextAuthSecret();
-      console.log('[STARTUP] NEXTAUTH_SECRET resolved via fallback');
-      console.log('[STARTUP]    - Secret length:', secret.length, 'chars');
+      // No fallback available — IDP config is the only source for the auth secret
+      console.error('[STARTUP] No fallback available for auth secret resolution');
     }
 
     // Step 2: Verify NEXTAUTH_SECRET is available - FAIL FAST if not

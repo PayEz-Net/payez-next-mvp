@@ -13,7 +13,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 export interface SiteLogsHandlerConfig {
-    getAuthOptions: () => Promise<any>;
     vibeApiUrl?: string;
     appSlug?: string;
     vibeClientId?: string;

@@ -3,8 +3,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmergencyLogoutPage = EmergencyLogoutPage;
 const jsx_runtime_1 = require("react/jsx-runtime");
-const react_1 = require("next-auth/react");
-const react_2 = require("react");
+const better_auth_client_1 = require("../../client/better-auth-client");
+const react_1 = require("react");
 /**
  * Emergency Logout Page
  *
@@ -18,12 +18,13 @@ const react_2 = require("react");
  * ```
  */
 function EmergencyLogoutPage() {
-    const { status } = (0, react_1.useSession)();
-    const [isDarkMode, setIsDarkMode] = (0, react_2.useState)(false);
-    const [isLoggingOut, setIsLoggingOut] = (0, react_2.useState)(false);
-    const [logoutComplete, setLogoutComplete] = (0, react_2.useState)(false);
-    const [logs, setLogs] = (0, react_2.useState)([]);
-    (0, react_2.useEffect)(() => {
+    const { data: sessionData, isPending } = better_auth_client_1.authClient.useSession();
+    const status = isPending ? 'loading' : sessionData ? 'authenticated' : 'unauthenticated';
+    const [isDarkMode, setIsDarkMode] = (0, react_1.useState)(false);
+    const [isLoggingOut, setIsLoggingOut] = (0, react_1.useState)(false);
+    const [logoutComplete, setLogoutComplete] = (0, react_1.useState)(false);
+    const [logs, setLogs] = (0, react_1.useState)([]);
+    (0, react_1.useEffect)(() => {
         const checkDarkMode = () => {
             const isDark = document.documentElement.classList.contains('dark') ||
                 window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -66,10 +67,10 @@ function EmergencyLogoutPage() {
             addLog('Clearing sessionStorage...');
             sessionStorage.clear();
             addLog('sessionStorage cleared');
-            // Step 4: Call NextAuth signOut
-            addLog('Calling NextAuth signOut...');
-            await (0, react_1.signOut)({ redirect: false });
-            addLog('NextAuth signOut complete');
+            // Step 4: Call Better Auth signOut
+            addLog('Calling Better Auth signOut...');
+            await better_auth_client_1.authClient.signOut();
+            addLog('Better Auth signOut complete');
             // Step 5: Clear any auth-related fetch cache
             addLog('Invalidating caches...');
             if ('caches' in window) {
