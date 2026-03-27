@@ -48,6 +48,14 @@ function createBetterAuthInstance(idpConfig) {
     return (0, better_auth_1.betterAuth)({
         secret: idpConfig.nextAuthSecret,
         socialProviders: buildBetterAuthProviders(idpConfig),
+        // Trust the app's own origin + any configured base URL
+        trustedOrigins: [
+            ...(idpConfig.baseClientUrl ? [idpConfig.baseClientUrl] : []),
+            ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+            'http://localhost:3000',
+            'http://localhost:3400',
+            'http://localhost:3600',
+        ],
         // No database — stateless mode. Better Auth defaults to JWE cookie cache.
         // Session cookie cache with refreshCache for DB-less setup.
         session: {
