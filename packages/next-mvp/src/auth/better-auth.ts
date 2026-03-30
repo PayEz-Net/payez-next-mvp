@@ -16,6 +16,7 @@ import { toNextJsHandler } from 'better-auth/next-js';
 import type { IDPClientConfig } from '../lib/idp-client-config';
 import { getIDPClientConfig } from '../lib/idp-client-config';
 import { getAppSlug } from '../lib/app-slug';
+import { getRedis } from '../lib/redis';
 
 /**
  * Better Auth social provider config shape.
@@ -76,13 +77,34 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
       'http://localhost:3600',
     ],
 
-    // No database — stateless mode. Better Auth defaults to JWE cookie cache.
-    // Session cookie cache with refreshCache for DB-less setup.
+    // Redis-backed session storage via secondaryStorage
+    secondaryStorage: {
+      get: async (key: string) => {
+        try {
+          return await getRedis().get(`ba:${appSlug}:${key}`);
+        } catch { return null; }
+      },
+      set: async (key: string, value: string, ttl?: number) => {
+        try {
+          const redis = getRedis();
+          if (ttl) {
+            await redis.setex(`ba:${appSlug}:${key}`, ttl, value);
+          } else {
+            await redis.setex(`ba:${appSlug}:${key}`, 7 * 24 * 60 * 60, value);
+          }
+        } catch { /* Redis unavailable — cookie cache still works */ }
+      },
+      delete: async (key: string) => {
+        try {
+          await getRedis().del(`ba:${appSlug}:${key}`);
+        } catch { /* ignore */ }
+      },
+    },
+
     session: {
       cookieCache: {
         enabled: true,
         maxAge: 300,
-        refreshCache: true,
       },
     },
 

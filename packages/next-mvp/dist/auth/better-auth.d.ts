@@ -33,11 +33,15 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
     secret: string;
     socialProviders: Record<string, BetterAuthSocialProvider>;
     trustedOrigins: string[];
+    secondaryStorage: {
+        get: (key: string) => Promise<string | null>;
+        set: (key: string, value: string, ttl?: number) => Promise<void>;
+        delete: (key: string) => Promise<void>;
+    };
     session: {
         cookieCache: {
             enabled: true;
             maxAge: number;
-            refreshCache: true;
         };
     };
     advanced: {

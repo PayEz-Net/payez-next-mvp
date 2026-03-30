@@ -16,11 +16,15 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
     secret: string;
     socialProviders: Record<string, import("../auth/better-auth").BetterAuthSocialProvider>;
     trustedOrigins: string[];
+    secondaryStorage: {
+        get: (key: string) => Promise<string | null>;
+        set: (key: string, value: string, ttl?: number) => Promise<void>;
+        delete: (key: string) => Promise<void>;
+    };
     session: {
         cookieCache: {
             enabled: true;
             maxAge: number;
-            refreshCache: true;
         };
     };
     advanced: {
