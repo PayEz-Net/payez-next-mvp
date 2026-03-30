@@ -28,6 +28,13 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
             refreshCache: false;
         };
     };
+    databaseHooks: {
+        session: {
+            create: {
+                after: (session: any) => Promise<void>;
+            };
+        };
+    };
     advanced: {
         cookiePrefix: string;
         cookies: {

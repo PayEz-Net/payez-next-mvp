@@ -294,15 +294,17 @@ export async function ensureFreshToken(
         const baRaw = await getRedis().get(baKey);
         if (baRaw) {
           const baSession = JSON.parse(baRaw);
-          // Map Better Auth session to SessionData
+          const idpTokens = baSession.idpTokens;
+
           sessionData = {
-            userId: baSession.user?.id || betterAuthSession.user?.id || '',
-            email: baSession.user?.email || betterAuthSession.user?.email || '',
-            name: baSession.user?.name || betterAuthSession.user?.name,
-            roles: [],
-            idpAccessTokenExpires: baSession.session?.expiresAt
-              ? new Date(baSession.session.expiresAt).getTime()
-              : Date.now() + 24 * 60 * 60 * 1000,
+            userId: idpTokens?.userId || baSession.user?.id || betterAuthSession.user?.id || '',
+            email: idpTokens?.email || baSession.user?.email || betterAuthSession.user?.email || '',
+            name: idpTokens?.name || baSession.user?.name || betterAuthSession.user?.name,
+            roles: idpTokens?.roles || [],
+            idpAccessToken: idpTokens?.idpAccessToken,
+            idpRefreshToken: idpTokens?.idpRefreshToken,
+            idpAccessTokenExpires: idpTokens?.idpAccessTokenExpires
+              || (baSession.session?.expiresAt ? new Date(baSession.session.expiresAt).getTime() : Date.now() + 24 * 60 * 60 * 1000),
             mfaVerified: true,
             oauthProvider: 'google',
           } as SessionData;
@@ -310,19 +312,17 @@ export async function ensureFreshToken(
       } catch { /* Redis unavailable */ }
     }
 
-    if (!sessionData) {
-      // Last resort: build from Better Auth in-memory session
-      if (betterAuthSession.user) {
-        sessionData = {
-          userId: betterAuthSession.user.id || '',
-          email: betterAuthSession.user.email || '',
-          name: betterAuthSession.user.name,
-          roles: [],
-          idpAccessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
-          mfaVerified: true,
-          oauthProvider: 'google',
-        } as SessionData;
-      }
+    if (!sessionData && betterAuthSession.user) {
+      // Last resort: build from Better Auth in-memory session (no IDP tokens)
+      sessionData = {
+        userId: betterAuthSession.user.id || '',
+        email: betterAuthSession.user.email || '',
+        name: betterAuthSession.user.name,
+        roles: [],
+        idpAccessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+        mfaVerified: true,
+        oauthProvider: 'google',
+      } as SessionData;
     }
 
     if (!sessionData) {

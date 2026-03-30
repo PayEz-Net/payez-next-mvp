@@ -100,6 +100,80 @@ function createBetterAuthInstance(idpConfig) {
                 refreshCache: false,
             },
         },
+        // After social login, exchange Google identity for IDP tokens and store in Redis
+        databaseHooks: {
+            session: {
+                create: {
+                    after: async (session) => {
+                        try {
+                            const userId = session.userId;
+                            const token = session.token;
+                            if (!userId || !token)
+                                return;
+                            // Look up user from Better Auth's memory/DB to get email
+                            // The user was just created/found by Better Auth during OAuth
+                            const baKey = `ba:${appSlug}:${token}`;
+                            const baRaw = await (0, redis_1.getRedis)().get(baKey).catch(() => null);
+                            const baData = baRaw ? JSON.parse(baRaw) : null;
+                            const email = baData?.user?.email;
+                            const name = baData?.user?.name;
+                            const image = baData?.user?.image;
+                            if (!email) {
+                                console.warn('[BETTER_AUTH] Session created but no email found for IDP token exchange');
+                                return;
+                            }
+                            // Call IDP oauth-callback to get IDP tokens
+                            const idpUrl = process.env.INTERNAL_IDP_URL || process.env.IDP_URL || '';
+                            if (!idpUrl) {
+                                console.warn('[BETTER_AUTH] No IDP URL configured, skipping token exchange');
+                                return;
+                            }
+                            const oauthRes = await fetch(`${idpUrl}/api/ExternalAuth/oauth-callback`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    provider: 'google',
+                                    provider_account_id: userId,
+                                    email,
+                                    name,
+                                    image,
+                                    client_id: idpConfig.clientSlug || String(idpConfig.clientId),
+                                }),
+                            });
+                            if (!oauthRes.ok) {
+                                console.error('[BETTER_AUTH] IDP oauth-callback failed:', oauthRes.status, await oauthRes.text().catch(() => ''));
+                                return;
+                            }
+                            const idpData = await oauthRes.json();
+                            const result = idpData?.data?.result || idpData?.result || idpData;
+                            if (!result?.access_token) {
+                                console.warn('[BETTER_AUTH] IDP oauth-callback returned no access_token');
+                                return;
+                            }
+                            // Store IDP tokens in the BA Redis session
+                            if (baData) {
+                                baData.idpTokens = {
+                                    idpAccessToken: result.access_token,
+                                    idpRefreshToken: result.refresh_token,
+                                    idpAccessTokenExpires: result.expires_in
+                                        ? Date.now() + result.expires_in * 1000
+                                        : Date.now() + 15 * 60 * 1000,
+                                    userId: String(result.user?.id || result.id || userId),
+                                    email: result.user?.email || result.email || email,
+                                    name: result.user?.name || result.name || name,
+                                    roles: result.user?.roles || result.roles || [],
+                                };
+                                await (0, redis_1.getRedis)().setex(baKey, 7 * 24 * 60 * 60, JSON.stringify(baData));
+                                console.log('[BETTER_AUTH] IDP tokens stored in session for', email);
+                            }
+                        }
+                        catch (err) {
+                            console.error('[BETTER_AUTH] Post-login IDP exchange failed:', err instanceof Error ? err.message : String(err));
+                        }
+                    },
+                },
+            },
+        },
         // Cookie prefix must match slim-middleware expectations ({slug}.session-token)
         advanced: {
             cookiePrefix: appSlug,

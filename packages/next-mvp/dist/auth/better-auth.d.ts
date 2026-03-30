@@ -45,6 +45,13 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
             refreshCache: false;
         };
     };
+    databaseHooks: {
+        session: {
+            create: {
+                after: (session: any) => Promise<void>;
+            };
+        };
+    };
     advanced: {
         cookiePrefix: string;
         cookies: {
