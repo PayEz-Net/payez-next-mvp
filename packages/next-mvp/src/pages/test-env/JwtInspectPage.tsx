@@ -49,6 +49,7 @@ export function JwtInspectPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [jwtHeader, setJwtHeader] = useState<any>(null);
   const [jwtPayload, setJwtPayload] = useState<any>(null);
+  const [serverSession, setServerSession] = useState<any>(null);
 
   // Detect dark mode
   useEffect(() => {
@@ -63,14 +64,25 @@ export function JwtInspectPage() {
     return () => mediaQuery.removeEventListener('change', checkDarkMode);
   }, []);
 
-  // Decode JWT header and payload when accessToken changes
+  // Fetch enriched session from server (has IDP tokens, roles, userId)
   useEffect(() => {
-    const ext = session as any;
-    if (ext?.accessToken) {
-      setJwtHeader(decodeJwtHeader(ext.accessToken));
-      setJwtPayload(decodeJwtPayload(ext.accessToken));
-    }
+    if (!session) return;
+    fetch('/api/internal/session-data')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) setServerSession(d);
+      })
+      .catch(() => {});
   }, [session]);
+
+  // Decode JWT header and payload from server session's IDP access token
+  useEffect(() => {
+    const token = serverSession?.idpAccessToken || (session as any)?.accessToken;
+    if (token) {
+      setJwtHeader(decodeJwtHeader(token));
+      setJwtPayload(decodeJwtPayload(token));
+    }
+  }, [serverSession, session]);
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -97,9 +109,33 @@ export function JwtInspectPage() {
     );
   }
 
-  // Extended session with all custom fields
+  // Merge server-side enriched session with client session
+  const ss = serverSession || {};
   const ext = session as any;
-  const user = ext?.user || {};
+  const user = {
+    id: ss.userId || ext?.user?.id,
+    email: ss.email || ext?.user?.email,
+    name: ss.name || ext?.user?.name,
+    roles: ss.roles || [],
+    oauthProvider: ss.oauthProvider,
+    idpClientId: ss.idpClientId,
+    merchantId: ss.merchantId,
+    mfaVerified: ss.mfaVerified,
+    requiresTwoFactor: false,
+    authenticationMethods: ss.authenticationMethods,
+    authenticationLevel: ss.authenticationLevel,
+    mfaCompletedAt: ss.mfaCompletedAt,
+    mfaExpiresAt: ss.mfaExpiresAt,
+    twoFactorSessionVerified: ss.mfaVerified,
+  };
+  // Token fields for display
+  const displayExt = {
+    ...ext,
+    sessionToken: ss.sessionToken || ext?.sessionToken,
+    accessToken: ss.idpAccessToken || ext?.accessToken,
+    refreshToken: ss.idpRefreshToken || ext?.refreshToken,
+    accessTokenExpires: ss.idpAccessTokenExpires || ext?.accessTokenExpires,
+  };
 
   // Card styling helpers
   const cardClass = isDarkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-gray-200';
@@ -111,7 +147,7 @@ export function JwtInspectPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold">Session Inspector</h1>
         <p className={`text-sm ${labelClass}`}>
-          Session data from Redis (via NextAuth session callback)
+          Better Auth session + IDP tokens from Redis
         </p>
 
         {/* User Identity */}
@@ -205,32 +241,32 @@ export function JwtInspectPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className={labelClass}>Session Token (Redis Key):</span>
-                {ext.sessionToken && (
+                {displayExt.sessionToken && (
                   <CopyButton
-                    onClick={() => copyToClipboard(ext.sessionToken, 'session')}
+                    onClick={() => copyToClipboard(displayExt.sessionToken, 'session')}
                     copied={copied === 'session'}
                     isDarkMode={isDarkMode}
                   />
                 )}
               </div>
               <code className={`block p-2 rounded text-xs break-all ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                {ext.sessionToken || 'N/A'}
+                {displayExt.sessionToken || 'N/A'}
               </code>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className={labelClass}>Access Token (IDP):</span>
-                {ext.accessToken && (
+                {displayExt.accessToken && (
                   <CopyButton
-                    onClick={() => copyToClipboard(ext.accessToken, 'access')}
+                    onClick={() => copyToClipboard(displayExt.accessToken, 'access')}
                     copied={copied === 'access'}
                     isDarkMode={isDarkMode}
                   />
                 )}
               </div>
               <code className={`block p-2 rounded text-xs break-all max-h-24 overflow-auto ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                {ext.accessToken || 'N/A'}
+                {displayExt.accessToken || 'N/A'}
               </code>
             </div>
 
@@ -238,7 +274,7 @@ export function JwtInspectPage() {
               <div>
                 <span className={labelClass}>Has Refresh Token:</span>{' '}
                 <StatusBadge
-                  value={!!ext.refreshToken}
+                  value={!!displayExt.refreshToken}
                   trueText="Yes"
                   falseText="No"
                   isDarkMode={isDarkMode}
@@ -246,7 +282,7 @@ export function JwtInspectPage() {
               </div>
               <InfoRow
                 label="Access Token Expires"
-                value={ext.accessTokenExpires ? new Date(ext.accessTokenExpires).toISOString() : undefined}
+                value={displayExt.accessTokenExpires ? new Date(displayExt.accessTokenExpires).toISOString() : undefined}
                 labelClass={labelClass}
                 valueClass={valueClass}
               />
@@ -338,7 +374,7 @@ export function JwtInspectPage() {
         <details className={`p-4 rounded-lg ${cardClass}`}>
           <summary className="font-semibold cursor-pointer">Raw Session Data (Click to expand)</summary>
           <pre className={`mt-4 text-xs overflow-auto p-3 rounded ${isDarkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
-            {JSON.stringify(session, null, 2)}
+            {JSON.stringify({ clientSession: session, serverSession: serverSession }, null, 2)}
           </pre>
         </details>
       </div>

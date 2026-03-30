@@ -140,14 +140,22 @@ function createBetterAuthInstance(idpConfig) {
                                     client_id: idpConfig.clientSlug || String(idpConfig.clientId),
                                 }),
                             });
+                            const oauthResText = await oauthRes.text();
+                            console.log('[BETTER_AUTH] IDP oauth-callback response:', oauthRes.status, oauthResText.substring(0, 500));
                             if (!oauthRes.ok) {
-                                console.error('[BETTER_AUTH] IDP oauth-callback failed:', oauthRes.status, await oauthRes.text().catch(() => ''));
+                                console.error('[BETTER_AUTH] IDP oauth-callback failed:', oauthRes.status);
                                 return;
                             }
-                            const idpData = await oauthRes.json();
-                            const result = idpData?.data?.result || idpData?.result || idpData;
+                            let idpData;
+                            try {
+                                idpData = JSON.parse(oauthResText);
+                            }
+                            catch {
+                                return;
+                            }
+                            const result = idpData?.data?.result || idpData?.data || idpData;
                             if (!result?.access_token) {
-                                console.warn('[BETTER_AUTH] IDP oauth-callback returned no access_token');
+                                console.warn('[BETTER_AUTH] IDP oauth-callback returned no access_token. Keys:', Object.keys(result || {}));
                                 return;
                             }
                             // Store IDP tokens in the BA Redis session
@@ -158,9 +166,9 @@ function createBetterAuthInstance(idpConfig) {
                                     idpAccessTokenExpires: result.expires_in
                                         ? Date.now() + result.expires_in * 1000
                                         : Date.now() + 15 * 60 * 1000,
-                                    userId: String(result.user?.id || result.id || userId),
+                                    userId: String(result.user?.user_id || result.user?.id || result.user_id || userId),
                                     email: result.user?.email || result.email || email,
-                                    name: result.user?.name || result.name || name,
+                                    name: result.user?.full_name || result.user?.name || result.name || name,
                                     roles: result.user?.roles || result.roles || [],
                                 };
                                 await (0, redis_1.getRedis)().setex(baKey, 7 * 24 * 60 * 60, JSON.stringify(baData));

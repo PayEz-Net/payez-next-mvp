@@ -41,6 +41,27 @@ export async function getSession(request?: Request): Promise<any> {
 
   try {
     const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.session?.token || !session?.user) return session;
+
+    // Enrich with IDP tokens from Redis (stored by post-login hook)
+    try {
+      const { getRedis } = await import('../lib/redis');
+      const { getAppSlug } = await import('../lib/app-slug');
+      const baKey = `ba:${getAppSlug()}:${session.session.token}`;
+      const baRaw = await getRedis().get(baKey);
+      if (baRaw) {
+        const baData = JSON.parse(baRaw);
+        if (baData.idpTokens) {
+          const u = session.user as any;
+          u.roles = baData.idpTokens.roles || [];
+          u.userId = baData.idpTokens.userId;
+          u.idpAccessToken = baData.idpTokens.idpAccessToken;
+          u.idpRefreshToken = baData.idpTokens.idpRefreshToken;
+          u.idpAccessTokenExpires = baData.idpTokens.idpAccessTokenExpires;
+        }
+      }
+    } catch { /* Redis unavailable */ }
+
     return session;
   } catch {
     return null;

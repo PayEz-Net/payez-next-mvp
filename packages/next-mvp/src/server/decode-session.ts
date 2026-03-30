@@ -75,16 +75,30 @@ async function tryBetterAuthSession(
       return null;
     }
 
-    // Map Better Auth session to SessionData
+    // Read IDP tokens from BA Redis session (stored by post-login hook)
+    let idpTokens: any = null;
+    try {
+      const { getRedis } = await import('../lib/redis');
+      const { getAppSlug } = await import('../lib/app-slug');
+      const baKey = `ba:${getAppSlug()}:${result.session.token}`;
+      const baRaw = await getRedis().get(baKey);
+      if (baRaw) {
+        const baData = JSON.parse(baRaw);
+        idpTokens = baData.idpTokens;
+      }
+    } catch { /* Redis unavailable */ }
+
+    // Map Better Auth session + IDP tokens to SessionData
     const sessionData: SessionData = {
-      userId: result.user.id || '',
-      email: result.user.email || '',
-      name: result.user.name || undefined,
-      roles: [],
-      idpAccessTokenExpires: result.session.expiresAt
-        ? new Date(result.session.expiresAt).getTime()
-        : Date.now() + 24 * 60 * 60 * 1000,
-      mfaVerified: true, // Social login doesn't require MFA
+      userId: idpTokens?.userId || result.user.id || '',
+      email: idpTokens?.email || result.user.email || '',
+      name: idpTokens?.name || result.user.name || undefined,
+      roles: idpTokens?.roles || [],
+      idpAccessToken: idpTokens?.idpAccessToken,
+      idpRefreshToken: idpTokens?.idpRefreshToken,
+      idpAccessTokenExpires: idpTokens?.idpAccessTokenExpires
+        || (result.session.expiresAt ? new Date(result.session.expiresAt).getTime() : Date.now() + 24 * 60 * 60 * 1000),
+      mfaVerified: true,
       oauthProvider: 'google',
     };
 
