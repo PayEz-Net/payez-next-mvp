@@ -97,6 +97,7 @@ function createBetterAuthInstance(idpConfig) {
             cookieCache: {
                 enabled: true,
                 maxAge: 300,
+                refreshCache: false,
             },
         },
         // Cookie prefix must match slim-middleware expectations ({slug}.session-token)

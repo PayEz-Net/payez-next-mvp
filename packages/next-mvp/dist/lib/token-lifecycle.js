@@ -25,6 +25,8 @@ exports.ensureFreshToken = ensureFreshToken;
 exports.getFreshAuthHeader = getFreshAuthHeader;
 const session_store_1 = require("./session-store");
 const auth_1 = require("../server/auth");
+const redis_1 = require("./redis");
+const app_slug_1 = require("./app-slug");
 // 5 minute threshold for "needs refresh" - matches refresh handler pattern
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 // Concurrent refresh handling configuration
@@ -220,8 +222,45 @@ async function ensureFreshToken(request) {
             };
         }
         const sessionToken = betterAuthSession.session.token;
-        // 2. Get session data from Redis
+        // 2. Get session data from Redis (legacy prefix), or Better Auth's secondary storage
         let sessionData = await (0, session_store_1.getSession)(sessionToken);
+        if (!sessionData) {
+            // Try Better Auth's secondaryStorage key (ba:{slug}:{token})
+            try {
+                const baKey = `ba:${(0, app_slug_1.getAppSlug)()}:${sessionToken}`;
+                const baRaw = await (0, redis_1.getRedis)().get(baKey);
+                if (baRaw) {
+                    const baSession = JSON.parse(baRaw);
+                    // Map Better Auth session to SessionData
+                    sessionData = {
+                        userId: baSession.user?.id || betterAuthSession.user?.id || '',
+                        email: baSession.user?.email || betterAuthSession.user?.email || '',
+                        name: baSession.user?.name || betterAuthSession.user?.name,
+                        roles: [],
+                        idpAccessTokenExpires: baSession.session?.expiresAt
+                            ? new Date(baSession.session.expiresAt).getTime()
+                            : Date.now() + 24 * 60 * 60 * 1000,
+                        mfaVerified: true,
+                        oauthProvider: 'google',
+                    };
+                }
+            }
+            catch { /* Redis unavailable */ }
+        }
+        if (!sessionData) {
+            // Last resort: build from Better Auth in-memory session
+            if (betterAuthSession.user) {
+                sessionData = {
+                    userId: betterAuthSession.user.id || '',
+                    email: betterAuthSession.user.email || '',
+                    name: betterAuthSession.user.name,
+                    roles: [],
+                    idpAccessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+                    mfaVerified: true,
+                    oauthProvider: 'google',
+                };
+            }
+        }
         if (!sessionData) {
             return {
                 success: false,

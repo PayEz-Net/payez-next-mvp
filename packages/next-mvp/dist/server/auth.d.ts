@@ -25,6 +25,7 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
         cookieCache: {
             enabled: true;
             maxAge: number;
+            refreshCache: false;
         };
     };
     advanced: {

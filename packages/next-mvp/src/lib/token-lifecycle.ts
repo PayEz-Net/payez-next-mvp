@@ -23,6 +23,8 @@
 import { NextRequest } from 'next/server';
 import { getSession as getRedisSession, SessionData } from './session-store';
 import { getSession as getBetterAuthSession } from '../server/auth';
+import { getRedis } from './redis';
+import { getAppSlug } from './app-slug';
 
 // 5 minute threshold for "needs refresh" - matches refresh handler pattern
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
@@ -282,8 +284,46 @@ export async function ensureFreshToken(
 
     const sessionToken = betterAuthSession.session.token;
 
-    // 2. Get session data from Redis
+    // 2. Get session data from Redis (legacy prefix), or Better Auth's secondary storage
     let sessionData = await getRedisSession(sessionToken);
+
+    if (!sessionData) {
+      // Try Better Auth's secondaryStorage key (ba:{slug}:{token})
+      try {
+        const baKey = `ba:${getAppSlug()}:${sessionToken}`;
+        const baRaw = await getRedis().get(baKey);
+        if (baRaw) {
+          const baSession = JSON.parse(baRaw);
+          // Map Better Auth session to SessionData
+          sessionData = {
+            userId: baSession.user?.id || betterAuthSession.user?.id || '',
+            email: baSession.user?.email || betterAuthSession.user?.email || '',
+            name: baSession.user?.name || betterAuthSession.user?.name,
+            roles: [],
+            idpAccessTokenExpires: baSession.session?.expiresAt
+              ? new Date(baSession.session.expiresAt).getTime()
+              : Date.now() + 24 * 60 * 60 * 1000,
+            mfaVerified: true,
+            oauthProvider: 'google',
+          } as SessionData;
+        }
+      } catch { /* Redis unavailable */ }
+    }
+
+    if (!sessionData) {
+      // Last resort: build from Better Auth in-memory session
+      if (betterAuthSession.user) {
+        sessionData = {
+          userId: betterAuthSession.user.id || '',
+          email: betterAuthSession.user.email || '',
+          name: betterAuthSession.user.name,
+          roles: [],
+          idpAccessTokenExpires: Date.now() + 24 * 60 * 60 * 1000,
+          mfaVerified: true,
+          oauthProvider: 'google',
+        } as SessionData;
+      }
+    }
 
     if (!sessionData) {
       return {
