@@ -1,30 +1,40 @@
 # @payez/next-mvp
 
-PayEz IDP authentication package for Next.js 14/15 with pre-built UI components and complete authentication flow.
+Drop-in authentication for Next.js. One package, zero secret management in production.
 
-## Version History
+```bash
+npm install @payez/next-mvp next-auth
+```
 
-### v2.4.2 (2025-11-14)
-- **Fixed**: Redirect loop on token expiration - middleware now allows NextAuth JWT callback to refresh expired tokens instead of immediately redirecting to login, preventing infinite redirect loops when access tokens expire
+## How Secrets Work
 
-### v2.4.1 (2025-11-14)
-- **Fixed**: Stale cookie detection - viability API now properly detects when JWT exists but Redis session is missing, preventing access with expired sessions
-- **Fixed**: Token refresh field names - changed to PascalCase (`RefreshToken`, `AuthenticationMethods`, `AuthenticationLevel`, `TwoFactorMethod`) to match IDP requirements, resolving 400 errors during token refresh
+You never manage signing keys or OAuth credentials directly. The package resolves them automatically at startup based on your environment.
 
-### v2.4.0
-- Auth-ready v2 handlers with pre-configured routes
-- Redis session management improvements
-- Token refresh optimizations
+| Environment | How it works | Secrets in your config? |
+|-------------|-------------|------------------------|
+| **Dev** | App calls IDP broker on your private network. One API key in `.env.local`. | One key (rotatable via CLI) |
+| **Production** | App calls a cluster-internal endpoint. Network boundary = identity. | None |
+| **Enterprise** | App uses an issued license key against your own or our IDP. | One key (rotatable via CLI) |
+
+**In production, there are no secrets to configure, rotate, or leak.** The app proves its identity by being inside the cluster.
+
+In dev, you have one key. Rotate it anytime:
+
+```bash
+npx @payez/cli secret rotate
+```
+
+Full architecture: [SECRET-MANAGEMENT-ARCHITECTURE.md](../../docs/SECRET-MANAGEMENT-ARCHITECTURE.md)
 
 ## Features
 
-- 🔐 **Complete Authentication Flow** - Login, logout, session management, password recovery
-- 🎨 **Pre-built UI Components** - Ready-to-use login, recovery, and verify-code pages
-- 🔄 **Automatic Token Refresh** - Built-in refresh token handling
-- 🎭 **Themeable** - Customize branding, colors, and layout via ThemeProvider
-- 📱 **Responsive Design** - Mobile-first Tailwind CSS components
-- 🚀 **Next.js 14/15 Ready** - Works with App Router and React Server Components
-- 🔒 **Secure by Default** - JWT-based authentication with PayEz IDP
+- **Zero-secret production deployment** — no signing keys, no OAuth secrets in your env
+- **Complete authentication flow** — login, logout, session management, password recovery
+- **Pre-built UI components** — themed login, recovery, and verify-code pages
+- **Automatic token refresh** — built-in refresh token handling with Redis session backing
+- **Google OAuth + 2FA** — pre-configured providers, MFA with email/SMS
+- **Themeable** — branding, colors, and layout via ThemeProvider
+- **Next.js 14/15** — App Router, React Server Components, middleware-ready
 
 ## Installation
 
