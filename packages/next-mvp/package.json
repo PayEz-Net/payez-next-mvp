@@ -1,6 +1,6 @@
 {
   "name": "@payez/next-mvp",
-  "version": "4.0.6",
+  "version": "4.0.7",
   "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

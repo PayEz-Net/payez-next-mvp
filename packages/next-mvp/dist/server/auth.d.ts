@@ -12,6 +12,7 @@ import 'server-only';
  * Get the initialized Better Auth instance (singleton).
  */
 export declare function getAuthInstance(): Promise<import("better-auth/types").Auth<{
+    baseURL: string;
     secret: string;
     socialProviders: Record<string, import("../auth/better-auth").BetterAuthSocialProvider>;
     trustedOrigins: string[];

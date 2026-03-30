@@ -67,6 +67,13 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
  */
 export declare function isBetterAuthEnabled(): boolean;
 /**
+ * Get Better Auth Next.js route handlers (GET, POST).
+ * Initializes Better Auth from IDP config on first call, caches the instance.
+ */
+declare let cachedInstance: any;
+export { cachedInstance as __betterAuthInstance };
+export declare function getBetterAuthInstance(): Promise<any>;
+/**
  * Get flag-gated auth handler for Next.js route.
  *
  * When USE_BETTER_AUTH=true, returns Better Auth handlers.

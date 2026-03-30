@@ -118,7 +118,11 @@ let cachedInstance: any = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let initPromise: Promise<any> | null = null;
 
-async function getBetterAuthInstance() {
+// Expose for server-side session access (decode-session.ts)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export { cachedInstance as __betterAuthInstance };
+
+export async function getBetterAuthInstance() {
   if (cachedInstance) return cachedInstance;
 
   if (!initPromise) {

@@ -10,9 +10,11 @@
  * @see BETTER-AUTH-MIGRATION-SPEC.md
  */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.__betterAuthInstance = void 0;
 exports.buildBetterAuthProviders = buildBetterAuthProviders;
 exports.createBetterAuthInstance = createBetterAuthInstance;
 exports.isBetterAuthEnabled = isBetterAuthEnabled;
+exports.getBetterAuthInstance = getBetterAuthInstance;
 exports.getBetterAuthHandler = getBetterAuthHandler;
 require("server-only");
 const better_auth_1 = require("better-auth");
@@ -96,6 +98,7 @@ function isBetterAuthEnabled() {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedInstance = null;
+exports.__betterAuthInstance = cachedInstance;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let initPromise = null;
 async function getBetterAuthInstance() {
@@ -104,7 +107,7 @@ async function getBetterAuthInstance() {
     if (!initPromise) {
         initPromise = (0, idp_client_config_1.getIDPClientConfig)().then(config => {
             const instance = createBetterAuthInstance(config);
-            cachedInstance = instance;
+            exports.__betterAuthInstance = cachedInstance = instance;
             console.log('[BETTER_AUTH] Instance created for', config.clientSlug || config.clientId);
             return instance;
         });

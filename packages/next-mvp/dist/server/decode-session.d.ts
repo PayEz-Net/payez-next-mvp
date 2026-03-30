@@ -1,10 +1,8 @@
 /**
  * Server-Side Session Decoder
  *
- * Reads the JWT session cookie, decodes it with jose, and fetches the
- * full session from Redis. Used by authGuard (layouts) and withAuth (API routes).
- *
- * Zero HTTP self-fetches. Direct Redis reads only.
+ * Uses Better Auth's server-side session API to get the current session.
+ * Falls back to legacy JWT + Redis path if Better Auth session not found.
  */
 import 'server-only';
 import { type JWTPayload } from 'jose';
@@ -17,8 +15,8 @@ export interface DecodedSession {
     };
 }
 /**
- * Decode the session from cookies and Redis.
- * Returns null if no valid session exists.
+ * Decode the session from cookies.
+ * Tries Better Auth first, falls back to legacy JWT + Redis.
  *
  * @param requestCookies Optional cookie getter for API route context (NextRequest.cookies).
  *                       If omitted, uses next/headers cookies() for server components.

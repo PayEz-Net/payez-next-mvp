@@ -2,11 +2,42 @@
 /**
  * Server-Side Session Decoder
  *
- * Reads the JWT session cookie, decodes it with jose, and fetches the
- * full session from Redis. Used by authGuard (layouts) and withAuth (API routes).
- *
- * Zero HTTP self-fetches. Direct Redis reads only.
+ * Uses Better Auth's server-side session API to get the current session.
+ * Falls back to legacy JWT + Redis path if Better Auth session not found.
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodeSession = decodeSession;
 require("server-only");
@@ -17,17 +48,100 @@ const idp_client_config_1 = require("../lib/idp-client-config");
 const app_slug_1 = require("../lib/app-slug");
 const startup_init_1 = require("../lib/startup-init");
 /**
- * Decode the session from cookies and Redis.
- * Returns null if no valid session exists.
+ * Try Better Auth's server-side session API.
+ * Returns a DecodedSession if Better Auth has an active session, null otherwise.
+ */
+async function tryBetterAuthSession(requestCookies) {
+    try {
+        const { getBetterAuthHandler } = await Promise.resolve().then(() => __importStar(require('../auth/better-auth')));
+        // getBetterAuthHandler initializes the instance; we need the raw instance
+        const { default: getBetterAuthInstanceFn } = await Promise.resolve().then(() => __importStar(require('../auth/better-auth'))).then(m => ({ default: m.getBetterAuthInstance || null }))
+            .catch(() => ({ default: null }));
+        // Access the cached instance via the module's internal getter
+        let auth = null;
+        try {
+            // Force handler init which caches the instance, then use the API
+            await getBetterAuthHandler();
+            // The instance is cached in the module — re-import to access it
+            const mod = await Promise.resolve().then(() => __importStar(require('../auth/better-auth')));
+            auth = mod.__betterAuthInstance;
+        }
+        catch {
+            return null;
+        }
+        if (!auth?.api?.getSession) {
+            return null;
+        }
+        // Build headers from cookies for Better Auth to read
+        const cookieStore = requestCookies || (await (0, headers_1.cookies)());
+        const headerObj = new Headers();
+        // Collect all cookies into a Cookie header
+        if ('getAll' in cookieStore && typeof cookieStore.getAll === 'function') {
+            const allCookies = cookieStore.getAll();
+            const cookieStr = allCookies.map((c) => `${c.name}=${c.value}`).join('; ');
+            headerObj.set('cookie', cookieStr);
+        }
+        else {
+            // Fallback: read known cookie names
+            const sessionCookieName = (0, app_slug_1.getSessionCookieName)();
+            const secureCookieName = (0, app_slug_1.getSecureSessionCookieName)();
+            const parts = [];
+            const sc = cookieStore.get(secureCookieName);
+            if (sc?.value)
+                parts.push(`${secureCookieName}=${sc.value}`);
+            const nc = cookieStore.get(sessionCookieName);
+            if (nc?.value)
+                parts.push(`${sessionCookieName}=${nc.value}`);
+            if (parts.length > 0)
+                headerObj.set('cookie', parts.join('; '));
+        }
+        const result = await auth.api.getSession({ headers: headerObj });
+        if (!result?.session || !result?.user) {
+            return null;
+        }
+        // Map Better Auth session to SessionData
+        const sessionData = {
+            userId: result.user.id || '',
+            email: result.user.email || '',
+            name: result.user.name || undefined,
+            roles: [],
+            idpAccessTokenExpires: result.session.expiresAt
+                ? new Date(result.session.expiresAt).getTime()
+                : Date.now() + 24 * 60 * 60 * 1000,
+            mfaVerified: true, // Social login doesn't require MFA
+            oauthProvider: 'google',
+        };
+        const jwtPayload = {
+            sub: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+            iat: Math.floor(Date.now() / 1000),
+            exp: sessionData.idpAccessTokenExpires / 1000,
+            sessionToken: result.session.token,
+        };
+        return { sessionData, jwtPayload };
+    }
+    catch (error) {
+        console.warn('[DECODE-SESSION] Better Auth session check failed:', error instanceof Error ? error.message : String(error));
+        return null;
+    }
+}
+/**
+ * Decode the session from cookies.
+ * Tries Better Auth first, falls back to legacy JWT + Redis.
  *
  * @param requestCookies Optional cookie getter for API route context (NextRequest.cookies).
  *                       If omitted, uses next/headers cookies() for server components.
  */
 async function decodeSession(requestCookies) {
     try {
-        // Ensure startup initialization is complete (Redis, IDP config, etc.)
         await (0, startup_init_1.ensureInitialized)();
-        // Get the JWT cookie value
+        // Try Better Auth session first
+        const betterAuthSession = await tryBetterAuthSession(requestCookies);
+        if (betterAuthSession) {
+            return betterAuthSession;
+        }
+        // Fall back to legacy JWT + Redis path
         const cookieStore = requestCookies || (await (0, headers_1.cookies)());
         const sessionCookieName = (0, app_slug_1.getSessionCookieName)();
         const secureCookieName = (0, app_slug_1.getSecureSessionCookieName)();
@@ -36,14 +150,12 @@ async function decodeSession(requestCookies) {
         if (!cookieValue) {
             return null;
         }
-        // Get the NextAuth secret from IDP config
         const config = await (0, idp_client_config_1.getIDPClientConfig)();
         const secret = config.nextAuthSecret;
         if (!secret) {
             console.error('[DECODE-SESSION] No nextAuthSecret available from IDP config');
             return null;
         }
-        // Decode the JWT (same pattern as test-aware-get-token.ts)
         const secretKey = new TextEncoder().encode(secret);
         let payload;
         try {
@@ -51,17 +163,14 @@ async function decodeSession(requestCookies) {
             payload = result.payload;
         }
         catch (jwtError) {
-            // JWT decode failed - cookie may be corrupted or secret rotated
             console.warn('[DECODE-SESSION] JWT verification failed:', jwtError instanceof Error ? jwtError.message : String(jwtError));
             return null;
         }
-        // Extract the Redis session ID from JWT payload
         const sessionToken = payload.sessionToken || payload.redisSessionId;
         if (!sessionToken) {
             console.warn('[DECODE-SESSION] JWT payload missing sessionToken/redisSessionId');
             return null;
         }
-        // Fetch session from Redis (direct, no HTTP)
         const sessionData = await (0, session_store_1.getSession)(sessionToken);
         if (!sessionData) {
             return null;
