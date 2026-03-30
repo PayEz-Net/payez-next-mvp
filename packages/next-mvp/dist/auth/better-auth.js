@@ -45,13 +45,18 @@ function buildBetterAuthProviders(config) {
  */
 function createBetterAuthInstance(idpConfig) {
     const appSlug = idpConfig.clientSlug || (0, app_slug_1.getAppSlug)();
+    // Resolve base URL: BETTER_AUTH_URL env > IDP config > localhost fallback
+    const baseURL = process.env.BETTER_AUTH_URL
+        || idpConfig.baseClientUrl
+        || `http://localhost:${process.env.PORT || '3000'}`;
     return (0, better_auth_1.betterAuth)({
+        baseURL,
         secret: idpConfig.nextAuthSecret,
         socialProviders: buildBetterAuthProviders(idpConfig),
         // Trust the app's own origin + any configured base URL
         trustedOrigins: [
-            ...(idpConfig.baseClientUrl ? [idpConfig.baseClientUrl] : []),
-            ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+            baseURL,
+            ...(idpConfig.baseClientUrl && idpConfig.baseClientUrl !== baseURL ? [idpConfig.baseClientUrl] : []),
             'http://localhost:3000',
             'http://localhost:3400',
             'http://localhost:3600',

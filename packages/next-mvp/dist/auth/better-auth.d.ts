@@ -29,6 +29,7 @@ export declare function buildBetterAuthProviders(config: IDPClientConfig): Recor
  * Call after getIDPClientConfig() resolves.
  */
 export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): import("better-auth").Auth<{
+    baseURL: string;
     secret: string;
     socialProviders: Record<string, BetterAuthSocialProvider>;
     trustedOrigins: string[];
