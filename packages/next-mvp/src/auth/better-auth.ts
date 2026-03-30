@@ -15,6 +15,7 @@ import { nextCookies } from 'better-auth/next-js';
 import { toNextJsHandler } from 'better-auth/next-js';
 import type { IDPClientConfig } from '../lib/idp-client-config';
 import { getIDPClientConfig } from '../lib/idp-client-config';
+import { getAppSlug } from '../lib/app-slug';
 
 /**
  * Better Auth social provider config shape.
@@ -53,6 +54,8 @@ export function buildBetterAuthProviders(
  * Call after getIDPClientConfig() resolves.
  */
 export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
+  const appSlug = idpConfig.clientSlug || getAppSlug();
+
   return betterAuth({
     secret: idpConfig.nextAuthSecret as string,
 
@@ -74,6 +77,16 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
         enabled: true,
         maxAge: 300,
         refreshCache: true,
+      },
+    },
+
+    // Cookie prefix must match slim-middleware expectations ({slug}.session-token)
+    advanced: {
+      cookiePrefix: appSlug,
+      cookies: {
+        session_token: {
+          name: `${appSlug}.session-token`,
+        },
       },
     },
 

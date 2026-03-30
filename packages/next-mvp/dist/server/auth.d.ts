@@ -22,6 +22,14 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
             refreshCache: true;
         };
     };
+    advanced: {
+        cookiePrefix: string;
+        cookies: {
+            session_token: {
+                name: string;
+            };
+        };
+    };
     plugins: [{
         id: "next-cookies";
         hooks: {

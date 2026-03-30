@@ -19,6 +19,7 @@ const better_auth_1 = require("better-auth");
 const next_js_1 = require("better-auth/next-js");
 const next_js_2 = require("better-auth/next-js");
 const idp_client_config_1 = require("../lib/idp-client-config");
+const app_slug_1 = require("../lib/app-slug");
 /**
  * Build Better Auth social providers from IDP config.
  */
@@ -43,6 +44,7 @@ function buildBetterAuthProviders(config) {
  * Call after getIDPClientConfig() resolves.
  */
 function createBetterAuthInstance(idpConfig) {
+    const appSlug = idpConfig.clientSlug || (0, app_slug_1.getAppSlug)();
     return (0, better_auth_1.betterAuth)({
         secret: idpConfig.nextAuthSecret,
         socialProviders: buildBetterAuthProviders(idpConfig),
@@ -61,6 +63,15 @@ function createBetterAuthInstance(idpConfig) {
                 enabled: true,
                 maxAge: 300,
                 refreshCache: true,
+            },
+        },
+        // Cookie prefix must match slim-middleware expectations ({slug}.session-token)
+        advanced: {
+            cookiePrefix: appSlug,
+            cookies: {
+                session_token: {
+                    name: `${appSlug}.session-token`,
+                },
             },
         },
         plugins: [

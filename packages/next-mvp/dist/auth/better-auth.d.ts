@@ -39,6 +39,14 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
             refreshCache: true;
         };
     };
+    advanced: {
+        cookiePrefix: string;
+        cookies: {
+            session_token: {
+                name: string;
+            };
+        };
+    };
     plugins: [{
         id: "next-cookies";
         hooks: {
