@@ -1,5 +1,13 @@
-export type Session = import('next-auth').Session;
-export type JWT = import('next-auth/jwt').JWT;
+export interface Session {
+  user?: { name?: string | null; email?: string | null; image?: string | null; id?: string };
+  expires: string;
+}
+export interface JWT {
+  [key: string]: unknown;
+  name?: string | null;
+  email?: string | null;
+  sub?: string;
+}
 export type TwoFactorMethod = 'none' | 'sms' | 'authenticator' | 'passkey';
 
 export interface User {
