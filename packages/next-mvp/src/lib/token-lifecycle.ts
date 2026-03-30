@@ -426,18 +426,10 @@ export async function ensureFreshToken(
       await delay(KEY_PROPAGATION_DELAY_MS);
     }
 
-    // 6. Validate we have a token
-    if (!sessionData.idpAccessToken) {
-      return {
-        success: false,
-        error: 'NO_TOKEN',
-        message: 'No access token available',
-      };
-    }
-
+    // 6. Return session — accessToken may be empty for social-only OAuth sessions
     return {
       success: true,
-      accessToken: sessionData.idpAccessToken,
+      accessToken: sessionData.idpAccessToken || '',
       sessionData,
     };
   } catch (error) {
