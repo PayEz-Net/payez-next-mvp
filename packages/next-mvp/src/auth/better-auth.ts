@@ -58,9 +58,11 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
   const appSlug = idpConfig.clientSlug || getAppSlug();
 
   // Resolve base URL: BETTER_AUTH_URL env > IDP config > localhost fallback
-  const baseURL = process.env.BETTER_AUTH_URL
+  // Must include /api/auth since that's where the catch-all route is mounted
+  const rawBaseURL = process.env.BETTER_AUTH_URL
     || idpConfig.baseClientUrl
     || `http://localhost:${process.env.PORT || '3000'}`;
+  const baseURL = rawBaseURL.replace(/\/+$/, '') + '/api/auth';
 
   return betterAuth({
     baseURL,
@@ -70,8 +72,9 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
 
     // Trust the app's own origin + any configured base URL
     trustedOrigins: [
+      rawBaseURL,
       baseURL,
-      ...(idpConfig.baseClientUrl && idpConfig.baseClientUrl !== baseURL ? [idpConfig.baseClientUrl] : []),
+      ...(idpConfig.baseClientUrl ? [idpConfig.baseClientUrl] : []),
       'http://localhost:3000',
       'http://localhost:3400',
       'http://localhost:3600',
@@ -106,91 +109,6 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
         enabled: true,
         maxAge: 300,
         refreshCache: false,
-      },
-    },
-
-    // After social login, exchange Google identity for IDP tokens and store in Redis
-    databaseHooks: {
-      session: {
-        create: {
-          after: async (session: any) => {
-            try {
-              const userId = session.userId;
-              const token = session.token;
-              if (!userId || !token) return;
-
-              // Look up user from Better Auth's memory/DB to get email
-              // The user was just created/found by Better Auth during OAuth
-              const baKey = `ba:${appSlug}:${token}`;
-              const baRaw = await getRedis().get(baKey).catch(() => null);
-              const baData = baRaw ? JSON.parse(baRaw) : null;
-              const email = baData?.user?.email;
-              const name = baData?.user?.name;
-              const image = baData?.user?.image;
-
-              if (!email) {
-                console.warn('[BETTER_AUTH] Session created but no email found for IDP token exchange');
-                return;
-              }
-
-              // Call IDP oauth-callback to get IDP tokens
-              const idpUrl = process.env.INTERNAL_IDP_URL || process.env.IDP_URL || '';
-              if (!idpUrl) {
-                console.warn('[BETTER_AUTH] No IDP URL configured, skipping token exchange');
-                return;
-              }
-
-              const oauthRes = await fetch(`${idpUrl}/api/ExternalAuth/oauth-callback`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  provider: 'google',
-                  provider_account_id: userId,
-                  email,
-                  name,
-                  image,
-                  client_id: idpConfig.clientSlug || String(idpConfig.clientId),
-                }),
-              });
-
-              const oauthResText = await oauthRes.text();
-              console.log('[BETTER_AUTH] IDP oauth-callback response:', oauthRes.status, oauthResText.substring(0, 500));
-
-              if (!oauthRes.ok) {
-                console.error('[BETTER_AUTH] IDP oauth-callback failed:', oauthRes.status);
-                return;
-              }
-
-              let idpData: any;
-              try { idpData = JSON.parse(oauthResText); } catch { return; }
-              const result = idpData?.data?.result || idpData?.data || idpData;
-
-              if (!result?.access_token) {
-                console.warn('[BETTER_AUTH] IDP oauth-callback returned no access_token. Keys:', Object.keys(result || {}));
-                return;
-              }
-
-              // Store IDP tokens in the BA Redis session
-              if (baData) {
-                baData.idpTokens = {
-                  idpAccessToken: result.access_token,
-                  idpRefreshToken: result.refresh_token,
-                  idpAccessTokenExpires: result.expires_in
-                    ? Date.now() + result.expires_in * 1000
-                    : Date.now() + 15 * 60 * 1000,
-                  userId: String(result.user?.user_id || result.user?.id || result.user_id || userId),
-                  email: result.user?.email || result.email || email,
-                  name: result.user?.full_name || result.user?.name || result.name || name,
-                  roles: result.user?.roles || result.roles || [],
-                };
-                await getRedis().setex(baKey, 7 * 24 * 60 * 60, JSON.stringify(baData));
-                console.log('[BETTER_AUTH] IDP tokens stored in session for', email);
-              }
-            } catch (err) {
-              console.error('[BETTER_AUTH] Post-login IDP exchange failed:', err instanceof Error ? err.message : String(err));
-            }
-          },
-        },
       },
     },
 
@@ -234,7 +152,7 @@ export async function getBetterAuthInstance() {
   if (cachedInstance) return cachedInstance;
 
   if (!initPromise) {
-    initPromise = getIDPClientConfig().then(config => {
+    initPromise = getIDPClientConfig(true).then(config => {
       const instance = createBetterAuthInstance(config);
       cachedInstance = instance;
       console.log('[BETTER_AUTH] Instance created for', config.clientSlug || config.clientId);
@@ -266,4 +184,185 @@ export async function getBetterAuthHandler(): Promise<{ GET: (req: Request) => P
 
   const auth = await getBetterAuthInstance();
   return toNextJsHandler(auth);
+}
+
+/**
+ * Exchange OAuth identity for IDP tokens and store in the BA Redis session.
+ *
+ * Call this from the OAuth callback route AFTER better-auth has processed the
+ * callback and created the session. Reads the session token from the Set-Cookie
+ * header of the response to find the BA Redis key.
+ *
+ * This replaces the old databaseHooks approach which doesn't fire in stateless mode.
+ */
+export async function exchangeOAuthForIdpTokens(
+  sessionToken: string,
+  provider: string = 'google'
+): Promise<boolean> {
+  try {
+    const config = await getIDPClientConfig();
+    const appSlug = config.clientSlug || getAppSlug();
+    const baKey = `ba:${appSlug}:${sessionToken}`;
+
+    // Read the BA session from Redis
+    const baRaw = await getRedis().get(baKey).catch(() => null);
+    if (!baRaw) {
+      console.warn('[BETTER_AUTH] exchangeOAuthForIdpTokens: session not found in Redis for token', sessionToken.substring(0, 10));
+      return false;
+    }
+
+    const baData = JSON.parse(baRaw);
+    const email = baData?.user?.email;
+    const name = baData?.user?.name;
+    const image = baData?.user?.image;
+    const baUserId = baData?.session?.userId || baData?.user?.id;
+
+    if (!email) {
+      console.warn('[BETTER_AUTH] exchangeOAuthForIdpTokens: no email in session');
+      return false;
+    }
+
+    // Call IDP oauth-callback
+    const idpUrl = process.env.IDP_URL || '';
+    if (!idpUrl) {
+      console.warn('[BETTER_AUTH] No IDP_URL configured, skipping token exchange');
+      return false;
+    }
+
+    console.log('[BETTER_AUTH] Exchanging OAuth identity for IDP tokens:', email);
+
+    const oauthRes = await fetch(`${idpUrl}/api/ExternalAuth/oauth-callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider,
+        provider_account_id: email,  // Cross-System Identity Standard v1.1: always use verified email, never opaque session IDs
+        email,
+        name,
+        image,
+        client_id: config.clientSlug || String(config.clientId),
+      }),
+    });
+
+    const oauthResText = await oauthRes.text();
+    console.log('[BETTER_AUTH] IDP oauth-callback response:', oauthRes.status, oauthResText.substring(0, 500));
+
+    if (!oauthRes.ok) {
+      console.error('[BETTER_AUTH] IDP oauth-callback failed:', oauthRes.status);
+      return false;
+    }
+
+    let idpData: any;
+    try { idpData = JSON.parse(oauthResText); } catch { return false; }
+    const result = idpData?.data?.result || idpData?.data || idpData;
+
+    if (!result?.access_token) {
+      console.warn('[BETTER_AUTH] IDP oauth-callback returned no access_token. Keys:', Object.keys(result || {}));
+      return false;
+    }
+
+    // Build IDP token data
+    const requiresTwoFactor = result.user?.requiresTwoFactor ?? result.requiresTwoFactor ?? false;
+    const idpTokenData = {
+      idpAccessToken: result.access_token,
+      idpRefreshToken: result.refresh_token,
+      idpAccessTokenExpires: result.expires_in
+        ? Date.now() + result.expires_in * 1000
+        : Date.now() + 15 * 60 * 1000,
+      userId: String(result.user?.user_id || result.user?.id || result.user_id || baUserId),
+      email: result.user?.email || result.email || email,
+      name: result.user?.full_name || result.user?.name || result.name || name,
+      roles: result.user?.roles || result.roles || [],
+      mfaVerified: !requiresTwoFactor,
+    };
+
+    // Store in BA Redis session (for decodeSession)
+    baData.idpTokens = idpTokenData;
+    await getRedis().setex(baKey, 7 * 24 * 60 * 60, JSON.stringify(baData));
+
+    // Write to canonical session store so refresh handler and token lifecycle can find the tokens.
+    // Key format: {sessionPrefix}{token} — same key that getSession() reads from.
+    try {
+      const { getSessionPrefix } = await import('../lib/app-slug');
+      const canonicalKey = `${getSessionPrefix()}${sessionToken}`;
+      await getRedis().setex(canonicalKey, 7 * 24 * 60 * 60, JSON.stringify({
+        ...idpTokenData,
+        oauthProvider: provider,
+      }));
+    } catch (canonicalErr) {
+      console.warn('[BETTER_AUTH] Failed to write canonical session:', canonicalErr instanceof Error ? canonicalErr.message : String(canonicalErr));
+    }
+
+    console.log('[BETTER_AUTH] IDP tokens stored in session for', email);
+    return true;
+  } catch (err) {
+    console.error('[BETTER_AUTH] IDP token exchange failed:', err instanceof Error ? err.message : String(err));
+    return false;
+  }
+}
+
+/**
+ * Create a production-ready GET handler for the auth catch-all route.
+ *
+ * Wraps better-auth's GET handler with:
+ * - OAuth state error recovery (redirects to login instead of error page)
+ * - IDP token exchange after successful OAuth callback
+ *
+ * Usage in host app:
+ * ```ts
+ * import { createAuthGetHandler, getBetterAuthHandler } from '@payez/next-mvp/auth/better-auth';
+ * export const GET = createAuthGetHandler('/account-auth/login');
+ * export async function POST(req: Request) {
+ *   const ba = await getBetterAuthHandler();
+ *   return ba!.POST(req);
+ * }
+ * ```
+ */
+export function createAuthGetHandler(loginPath: string = '/account-auth/login') {
+  return async function GET(request: Request): Promise<Response> {
+    const ba = await getBetterAuthHandler();
+    if (!ba) {
+      return new Response('Auth handler not configured', { status: 500 });
+    }
+
+    const response = await ba.GET(request);
+
+    // Intercept auth errors (state mismatch, expired cookies) — redirect to login cleanly
+    if (response.status === 302) {
+      const location = response.headers.get('location') || '';
+      if (location.includes('/api/auth/error') || location.includes('please_restart')) {
+        console.warn('[BETTER_AUTH] OAuth state error, redirecting to login');
+        return Response.redirect(new URL(loginPath, request.url), 302);
+      }
+    }
+
+    // After successful OAuth callback: exchange Google identity for IDP tokens
+    const url = new URL(request.url);
+    if (url.pathname.includes('/callback/') && response.status === 302) {
+      try {
+        const auth = await getBetterAuthInstance();
+        if (auth?.api?.getSession) {
+          const setCookies = response.headers.getSetCookie?.() || [];
+          const cookieHeader = setCookies
+            .map((c: string) => c.split(';')[0])
+            .join('; ');
+
+          const headers = new Headers();
+          headers.set('cookie', cookieHeader);
+
+          const session = await auth.api.getSession({ headers });
+          if (session?.session?.token) {
+            console.log('[BETTER_AUTH] Got session token from callback:', session.session.token.substring(0, 10), '| email:', session.user?.email);
+            await exchangeOAuthForIdpTokens(session.session.token);
+          } else {
+            console.warn('[BETTER_AUTH] Could not get session after OAuth callback');
+          }
+        }
+      } catch (err: any) {
+        console.error('[BETTER_AUTH] IDP token exchange failed:', err.message);
+      }
+    }
+
+    return response;
+  };
 }
