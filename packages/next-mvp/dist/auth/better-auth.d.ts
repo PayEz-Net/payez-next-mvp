@@ -45,13 +45,6 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig): im
             refreshCache: false;
         };
     };
-    databaseHooks: {
-        session: {
-            create: {
-                after: (session: any) => Promise<void>;
-            };
-        };
-    };
     advanced: {
         cookiePrefix: string;
         cookies: {
@@ -105,3 +98,31 @@ export declare function getBetterAuthHandler(): Promise<{
     GET: (req: Request) => Promise<Response>;
     POST: (req: Request) => Promise<Response>;
 } | null>;
+/**
+ * Exchange OAuth identity for IDP tokens and store in the BA Redis session.
+ *
+ * Call this from the OAuth callback route AFTER better-auth has processed the
+ * callback and created the session. Reads the session token from the Set-Cookie
+ * header of the response to find the BA Redis key.
+ *
+ * This replaces the old databaseHooks approach which doesn't fire in stateless mode.
+ */
+export declare function exchangeOAuthForIdpTokens(sessionToken: string, provider?: string): Promise<boolean>;
+/**
+ * Create a production-ready GET handler for the auth catch-all route.
+ *
+ * Wraps better-auth's GET handler with:
+ * - OAuth state error recovery (redirects to login instead of error page)
+ * - IDP token exchange after successful OAuth callback
+ *
+ * Usage in host app:
+ * ```ts
+ * import { createAuthGetHandler, getBetterAuthHandler } from '@payez/next-mvp/auth/better-auth';
+ * export const GET = createAuthGetHandler('/account-auth/login');
+ * export async function POST(req: Request) {
+ *   const ba = await getBetterAuthHandler();
+ *   return ba!.POST(req);
+ * }
+ * ```
+ */
+export declare function createAuthGetHandler(loginPath?: string): (request: Request) => Promise<Response>;

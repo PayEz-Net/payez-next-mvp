@@ -18,7 +18,7 @@ const defaultConfig = {
     enableEmailSignup: true,
     allowPasswordReset: true,
 };
-// Map NextAuth provider IDs to our FederatedProvider type
+// Map provider IDs to our FederatedProvider type
 const PROVIDER_MAP = {
     'google': 'google',
     'apple': 'apple',
@@ -42,7 +42,7 @@ function AuthProvider({ children, config, useDynamicProviders = true }) {
             },
         },
     }));
-    // Fetch dynamic providers from NextAuth on mount
+    // Load available providers on mount
     (0, react_1.useEffect)(() => {
         if (!useDynamicProviders)
             return;

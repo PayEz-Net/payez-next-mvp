@@ -1,8 +1,8 @@
 /**
  * useAvailableProviders Hook
  *
- * Fetches the list of OAuth providers actually configured in NextAuth.
- * This ensures UI only shows buttons for providers that are enabled in IDP.
+ * Returns the list of OAuth providers configured for this client.
+ * Ensures UI only shows buttons for providers that are enabled in IDP.
  */
 import type { FederatedProvider } from '../types/auth';
 export interface UseAvailableProvidersResult {
@@ -12,10 +12,9 @@ export interface UseAvailableProvidersResult {
     rawProviders: Record<string, any> | null;
 }
 /**
- * Hook to get available OAuth providers from NextAuth.
+ * Hook to get available federated OAuth providers.
  *
- * Returns only the providers that are actually configured in auth-options,
- * which reflects what's enabled in IDP config.
+ * Returns only the providers that are enabled in IDP config.
  *
  * @example
  * ```tsx

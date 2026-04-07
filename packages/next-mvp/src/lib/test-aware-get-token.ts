@@ -6,11 +6,11 @@ import { getSessionCookieName } from './app-slug';
 export async function getTokenTestAware(req: NextRequest): Promise<any> {
   if (process.env.TEST_MODE === 'true') {
     try {
-      let secret = process.env.NEXTAUTH_SECRET;
+      let secret = process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
       if (!secret || secret.trim() === '') {
         const { getIDPClientConfig } = await import('./idp-client-config');
         const idpConfig = await getIDPClientConfig();
-        secret = idpConfig.nextAuthSecret as string;
+        secret = idpConfig.authSecret;
       }
       // Use app-slug prefixed cookie name
       const cookieName = getSessionCookieName();
@@ -24,17 +24,18 @@ export async function getTokenTestAware(req: NextRequest): Promise<any> {
       return payload;
     } catch (error) { logger.error('[GET_TOKEN] TEST_MODE token decode error:', { error: error instanceof Error ? error.message : String(error) }); return null; }
   }
-  // Production path: use Better Auth session
+  // Production path: Better Auth session
   const session = await getSession(req);
-  if (!session) return null;
-  // Return a token-like object for backward compatibility with callers
-  // that access token.sub, token.email, token.sessionToken, token.roles, etc.
-  return {
-    sub: session.user?.id,
-    email: session.user?.email,
-    name: session.user?.name,
-    sessionToken: session.session?.token,
-    roles: session.user?.roles || [],
-    ...(session.user || {}),
-  };
+  if (session?.user && session?.session?.token) {
+    return {
+      sub: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      sessionToken: session.session.token,
+      roles: session.user.roles || [],
+      ...session.user,
+    };
+  }
+
+  return null;
 }

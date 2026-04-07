@@ -5,7 +5,7 @@
  * - OAuth provider credentials (from Key Vault)
  * - 2FA/MFA settings
  * - Session configuration
- * - NextAuth secret
+ * - Better Auth signing secret
  * - Branding
  *
  * CACHING STRATEGY:
@@ -58,7 +58,11 @@ export interface BrandingConfig {
 export interface IDPClientConfig {
     clientId: string;
     clientSlug: string;
-    nextAuthSecret: string;
+    /**
+     * Cryptographic secret used by Better Auth to sign session JWTs.
+     * Historically named "nextAuthSecret" — kept under the new name now.
+     */
+    authSecret: string;
     configCacheTtlSeconds: number;
     oauthProviders: OAuthProviderConfig[];
     authSettings: AuthSettings;
@@ -170,14 +174,15 @@ export async function getIDPClientConfig(forceRefresh: boolean = false): Promise
             cachedConfig = redisConfig;
             cacheExpiry = Date.now() + ((redisConfig.configCacheTtlSeconds || 300) * 1000);
 
-            // Set NEXTAUTH_SECRET from cached config
-            if (redisConfig.nextAuthSecret) {
-                process.env.NEXTAUTH_SECRET = redisConfig.nextAuthSecret;
+            // Set BETTER_AUTH_SECRET from cached config (also set legacy
+            // NEXTAUTH_SECRET during the rename transition).
+            if (redisConfig.authSecret) {
+                process.env.BETTER_AUTH_SECRET = redisConfig.authSecret;
+                process.env.NEXTAUTH_SECRET = redisConfig.authSecret;
             }
 
-            // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from cached config
-            // AUTH_TRUST_HOST=true tells NextAuth to derive OAuth callback URLs from headers.
-            // Only set if not already defined (allows deployment override for beta/staging)
+            // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from cached config.
+            // Only set if not already defined (allows deployment override for beta/staging).
             if (redisConfig.baseClientUrl && !process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL) {
                 process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL = redisConfig.baseClientUrl;
             }
@@ -211,16 +216,17 @@ export async function getIDPClientConfig(forceRefresh: boolean = false): Promise
             // Store in Redis for persistence across module reloads
             await setConfigInRedis(config);
 
-            // Set NEXTAUTH_SECRET from config
-            if (config.nextAuthSecret) {
-                process.env.NEXTAUTH_SECRET = config.nextAuthSecret;
+            // Set BETTER_AUTH_SECRET from config (also set legacy
+            // NEXTAUTH_SECRET during the rename transition).
+            if (config.authSecret) {
+                process.env.BETTER_AUTH_SECRET = config.authSecret;
+                process.env.NEXTAUTH_SECRET = config.authSecret;
             } else {
-                throw new Error('[IDP_CONFIG] FATAL: IDP did not return nextAuthSecret');
+                throw new Error('[IDP_CONFIG] FATAL: IDP did not return authSecret');
             }
 
-            // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from config
-            // AUTH_TRUST_HOST=true tells NextAuth to derive OAuth callback URLs from headers.
-            // Only set if not already defined (allows deployment override for beta/staging)
+            // Set IDENTITY_CLIENT_BASE_EXTERNAL_URL from config.
+            // Only set if not already defined (allows deployment override for beta/staging).
             if (config.baseClientUrl && !process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL) {
                 process.env.IDENTITY_CLIENT_BASE_EXTERNAL_URL = config.baseClientUrl;
                 console.log("[IDP_CONFIG] Set IDENTITY_CLIENT_BASE_EXTERNAL_URL:", config.baseClientUrl);
@@ -241,6 +247,19 @@ export async function getIDPClientConfig(forceRefresh: boolean = false): Promise
 export function clearConfigCache(): void {
     cachedConfig = null;
     cacheExpiry = 0;
+}
+
+/**
+ * Clear the Redis config cache so the next fetch always goes to IDP.
+ */
+export async function clearConfigRedisCache(): Promise<void> {
+    try {
+        const key = getRedisConfigKey();
+        await redis.del(key);
+        console.log('[IDP_CONFIG] Redis cache cleared:', key);
+    } catch (error) {
+        console.warn('[IDP_CONFIG] Failed to clear Redis cache:', error);
+    }
 }
 
 /**
@@ -292,7 +311,14 @@ async function fetchConfigFromInternalIDP(internalIdpUrl: string, clientIdStr: s
     const config: IDPClientConfig = {
         clientId: String(rawClientId),
         clientSlug: configData.clientSlug ?? configData.client_slug ?? configData.slug ?? '',
-        nextAuthSecret: configData.nextAuthSecret ?? configData.next_auth_secret ?? '',
+        // Wire compatibility: accept new authSecret first, fall back to legacy
+        // nextAuthSecret/next_auth_secret while IDP rename rolls out.
+        authSecret:
+            configData.authSecret ??
+            configData.auth_secret ??
+            configData.nextAuthSecret ??
+            configData.next_auth_secret ??
+            '',
         configCacheTtlSeconds: configData.configCacheTtlSeconds ?? configData.config_cache_ttl_seconds ?? 300,
         oauthProviders: (configData.oauthProviders ?? configData.oauth_providers ?? []).map((p: any) => ({
             provider: p.provider ?? '',
@@ -323,8 +349,8 @@ async function fetchConfigFromInternalIDP(internalIdpUrl: string, clientIdStr: s
         baseClientUrl: configData.baseClientUrl ?? configData.base_client_url ?? configData.BaseClientUrl
     };
 
-    if (!config.nextAuthSecret) {
-        throw new Error('[IDP_CONFIG] FATAL: Internal IDP did not return nextAuthSecret');
+    if (!config.authSecret) {
+        throw new Error('[IDP_CONFIG] FATAL: Internal IDP did not return authSecret');
     }
 
     console.log(`[IDP_CONFIG] Internal IDP config loaded for ${clientIdStr}`);
@@ -451,11 +477,18 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
         throw new Error(`[IDP_CONFIG] FATAL: IDP response missing clientId/client_id. Got: ${JSON.stringify(Object.keys(configData))}`);
     }
 
-    // Map response to our interface (IDP always returns snake_case)
+    // Map response to our interface (IDP returns camelCase or snake_case).
+    // Wire compatibility: accept new authSecret first, fall back to legacy
+    // nextAuthSecret/next_auth_secret while IDP rename rolls out.
     const config: IDPClientConfig = {
         clientId: String(rawClientId),
         clientSlug: configData.clientSlug ?? configData.client_slug ?? configData.slug ?? '',
-        nextAuthSecret: configData.nextAuthSecret ?? configData.next_auth_secret ?? '',
+        authSecret:
+            configData.authSecret ??
+            configData.auth_secret ??
+            configData.nextAuthSecret ??
+            configData.next_auth_secret ??
+            '',
         configCacheTtlSeconds: configData.configCacheTtlSeconds ?? configData.config_cache_ttl_seconds ?? 300,
         oauthProviders: (configData.oauthProviders ?? configData.oauth_providers ?? []).map((p: any) => ({
             provider: p.provider ?? '',
@@ -504,8 +537,8 @@ async function fetchConfigFromIDP(idpUrl: string, clientIdStr: string): Promise<
     if (!config.clientId) {
         throw new Error('[IDP_CONFIG] FATAL: clientId is empty or missing after parsing');
     }
-    if (!config.nextAuthSecret) {
-        throw new Error('[IDP_CONFIG] FATAL: nextAuthSecret is empty after parsing');
+    if (!config.authSecret) {
+        throw new Error('[IDP_CONFIG] FATAL: authSecret is empty after parsing');
     }
 
     // Success - reset failure tracking

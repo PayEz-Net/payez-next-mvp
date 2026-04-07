@@ -4,9 +4,8 @@ interface AuthProviderProps {
     children: ReactNode;
     config?: Partial<AuthConfig>;
     /**
-     * If true, providers will be fetched dynamically from NextAuth
+     * If true, providers will be loaded dynamically from IDP config
      * instead of using the static providers array from config.
-     * Defaults to true for dynamic provider loading from IDP.
      */
     useDynamicProviders?: boolean;
 }

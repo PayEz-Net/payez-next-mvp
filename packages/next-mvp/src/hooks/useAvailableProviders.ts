@@ -1,17 +1,16 @@
 /**
  * useAvailableProviders Hook
  *
- * Fetches the list of OAuth providers actually configured in NextAuth.
- * This ensures UI only shows buttons for providers that are enabled in IDP.
+ * Returns the list of OAuth providers configured for this client.
+ * Ensures UI only shows buttons for providers that are enabled in IDP.
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { authClient } from '../client/better-auth-client';
 import type { FederatedProvider } from '../types/auth';
 
-// Map NextAuth provider IDs to our FederatedProvider type
+// Map provider IDs to our FederatedProvider type
 const PROVIDER_MAP: Record<string, FederatedProvider> = {
     'google': 'google',
     'apple': 'apple',
@@ -32,10 +31,9 @@ export interface UseAvailableProvidersResult {
 }
 
 /**
- * Hook to get available OAuth providers from NextAuth.
+ * Hook to get available federated OAuth providers.
  *
- * Returns only the providers that are actually configured in auth-options,
- * which reflects what's enabled in IDP config.
+ * Returns only the providers that are enabled in IDP config.
  *
  * @example
  * ```tsx

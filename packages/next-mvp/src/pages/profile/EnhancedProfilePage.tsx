@@ -459,7 +459,13 @@ export default function EnhancedProfilePage() {
         </EditableSection>
 
         {/* Quick Links */}
-        <div className="flex justify-center gap-6 pt-4">
+        <div className="flex flex-wrap justify-center gap-6 pt-4">
+          <a
+            href="/account/subscription"
+            className={`text-sm ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
+          >
+            Subscription & Billing →
+          </a>
           <a
             href="/account/security"
             className={`text-sm ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}

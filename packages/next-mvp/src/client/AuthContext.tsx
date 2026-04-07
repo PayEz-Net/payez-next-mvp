@@ -15,7 +15,7 @@ const defaultConfig: AuthConfig = {
   allowPasswordReset: true,
 };
 
-// Map NextAuth provider IDs to our FederatedProvider type
+// Map provider IDs to our FederatedProvider type
 const PROVIDER_MAP: Record<string, FederatedProvider> = {
   'google': 'google',
   'apple': 'apple',
@@ -32,9 +32,8 @@ interface AuthProviderProps {
   children: ReactNode;
   config?: Partial<AuthConfig>;
   /**
-   * If true, providers will be fetched dynamically from NextAuth
+   * If true, providers will be loaded dynamically from IDP config
    * instead of using the static providers array from config.
-   * Defaults to true for dynamic provider loading from IDP.
    */
   useDynamicProviders?: boolean;
 }
@@ -54,7 +53,7 @@ export function AuthProvider({ children, config, useDynamicProviders = true }: A
     },
   }));
 
-  // Fetch dynamic providers from NextAuth on mount
+  // Load available providers on mount
   useEffect(() => {
     if (!useDynamicProviders) return;
 

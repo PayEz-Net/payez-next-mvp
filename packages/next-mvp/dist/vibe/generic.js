@@ -78,18 +78,20 @@ function vibeGridPath(collection, table) {
  * Vibe returns documents with a wrapper where actual data is a JSON string.
  *
  * @param doc - Raw Vibe document (wrapper format)
- * @returns Unwrapped document with id from document_id, or null if invalid
+ * @returns Unwrapped document with schema fields only.
+ *          Storage-layer document_id preserved as _vibe_doc_id for update/delete paths.
+ *          See PayEz-Core/docs/vibe-primary-key-standard.md
  *
  * @example
- * const raw = { document_id: 123, data: '{"name":"John","email":"john@example.com"}' };
+ * const raw = { document_id: 123, data: '{"user_id":15,"name":"John","email":"john@example.com"}' };
  * const unwrapped = unwrapVibeDocument(raw);
- * // => { id: 123, name: 'John', email: 'john@example.com' }
+ * // => { user_id: 15, name: 'John', email: 'john@example.com', _vibe_doc_id: 123 }
  */
 function unwrapVibeDocument(doc) {
     if (!doc)
         return null;
-    // Handle case where doc is already unwrapped (has id but no document_id)
-    if ('id' in doc && !('document_id' in doc)) {
+    // Handle case where doc is already unwrapped (has schema fields directly)
+    if (!('document_id' in doc) && !('data' in doc)) {
         return doc;
     }
     const wrapper = doc;
@@ -106,12 +108,12 @@ function unwrapVibeDocument(doc) {
     else if (typeof wrapper.data === 'object' && wrapper.data !== null) {
         parsedData = wrapper.data;
     }
-    const documentId = wrapper.document_id ?? doc.id ?? 0;
-    return {
-        id: documentId,
-        document_id: documentId,
-        ...parsedData,
-    };
+    // Preserve document_id as _vibe_doc_id for Vibe API update/delete paths only
+    const documentId = wrapper.document_id ?? doc.document_id;
+    if (documentId != null) {
+        parsedData._vibe_doc_id = documentId;
+    }
+    return parsedData;
 }
 /**
  * Extract and unwrap array of documents from Vibe response.

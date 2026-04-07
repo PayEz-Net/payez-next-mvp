@@ -1,16 +1,15 @@
 /**
- * Better Auth Client (Phase 3)
+ * Better Auth Client.
  *
- * Drop-in replacement for next-auth/react hooks and functions.
  * Import from '@payez/next-mvp/client/better-auth-client'.
  *
- * Includes useSessionCompat() — returns NextAuth-shaped { data, status }
- * so existing components don't need destructure pattern changes.
+ * Includes useSessionCompat() — returns a { data, status } shape so existing
+ * components written against the legacy hook don't need destructure changes.
  */
 export declare const authClient: {
     signIn: {
         social: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
-            provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
+            provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
             callbackURL?: string | undefined;
             newUserCallbackURL?: string | undefined;
             errorCallbackURL?: string | undefined;
@@ -34,7 +33,7 @@ export declare const authClient: {
             loginHint?: string | undefined;
             additionalData?: Record<string, any> | undefined;
         }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
-            provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
+            provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
             callbackURL?: string | undefined;
             newUserCallbackURL?: string | undefined;
             errorCallbackURL?: string | undefined;
@@ -828,7 +827,7 @@ export declare const useSession: () => {
     } | undefined) => Promise<void>;
 }, signIn: {
     social: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
-        provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
+        provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
         callbackURL?: string | undefined;
         newUserCallbackURL?: string | undefined;
         errorCallbackURL?: string | undefined;
@@ -852,7 +851,7 @@ export declare const useSession: () => {
         loginHint?: string | undefined;
         additionalData?: Record<string, any> | undefined;
     }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
-        provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
+        provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
         callbackURL?: string | undefined;
         newUserCallbackURL?: string | undefined;
         errorCallbackURL?: string | undefined;

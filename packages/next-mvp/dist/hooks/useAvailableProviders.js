@@ -2,21 +2,21 @@
 /**
  * useAvailableProviders Hook
  *
- * Fetches the list of OAuth providers actually configured in NextAuth.
- * This ensures UI only shows buttons for providers that are enabled in IDP.
+ * Returns the list of OAuth providers configured for this client.
+ * Ensures UI only shows buttons for providers that are enabled in IDP.
  */
 'use client';
 /**
  * useAvailableProviders Hook
  *
- * Fetches the list of OAuth providers actually configured in NextAuth.
- * This ensures UI only shows buttons for providers that are enabled in IDP.
+ * Returns the list of OAuth providers configured for this client.
+ * Ensures UI only shows buttons for providers that are enabled in IDP.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.useAvailableProviders = useAvailableProviders;
 exports.useIsProviderAvailable = useIsProviderAvailable;
 const react_1 = require("react");
-// Map NextAuth provider IDs to our FederatedProvider type
+// Map provider IDs to our FederatedProvider type
 const PROVIDER_MAP = {
     'google': 'google',
     'apple': 'apple',
@@ -28,10 +28,9 @@ const PROVIDER_MAP = {
 // Providers we support in UI (excludes credentials)
 const OAUTH_PROVIDERS = ['google', 'apple', 'facebook', 'github', 'azure-ad', 'microsoft-entra-id'];
 /**
- * Hook to get available OAuth providers from NextAuth.
+ * Hook to get available federated OAuth providers.
  *
- * Returns only the providers that are actually configured in auth-options,
- * which reflects what's enabled in IDP config.
+ * Returns only the providers that are enabled in IDP config.
  *
  * @example
  * ```tsx

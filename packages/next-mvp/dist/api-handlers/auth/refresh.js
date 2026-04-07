@@ -5,7 +5,7 @@
  * ASK BEFORE EDITING - TESTED AND WORKING SYSTEM
  *
  * This handler manages the server-side refresh token cycle with:
- * - NextAuth JWT token extraction
+ * - Better Auth session extraction
  * - Session token fallback for internal calls
  * - PayEz IDP refresh token exchange
  * - Session state updates with new tokens
@@ -25,7 +25,7 @@ const token_utils_1 = require("../../auth/utils/token-utils");
 /**
  * Creates a refresh token handler for Next.js API routes
  *
- * @param config Configuration for IDP connection and NextAuth
+ * @param config IDP connection settings (Better Auth handles session crypto)
  * @returns Next.js POST handler function
  *
  * @example
@@ -36,13 +36,12 @@ const token_utils_1 = require("../../auth/utils/token-utils");
  * export const POST = createRefreshHandler({
  *   idpBaseUrl: process.env.IDP_URL!,
  *   clientId: process.env.CLIENT_ID!,
- *   nextAuthSecret: process.env.NEXTAUTH_SECRET!,
  *   refreshEndpoint: '/api/ExternalAuth/refresh'
  * });
  * ```
  */
 function createRefreshHandler(config) {
-    const { idpBaseUrl, clientId, nextAuthSecret, refreshEndpoint = '/api/ExternalAuth/refresh' } = config;
+    const { idpBaseUrl, clientId, refreshEndpoint = '/api/ExternalAuth/refresh' } = config;
     return async function POST(req) {
         try {
             // Extract session from Better Auth
@@ -622,12 +621,11 @@ function createRefreshHandler(config) {
     };
 }
 /**
- * Default export for backward compatibility
- * Requires environment variables: IDP_URL, CLIENT_ID, NEXTAUTH_SECRET
+ * Default POST export — drop-in for `app/api/auth/refresh/route.ts`.
+ * Requires environment variables: IDP_URL, CLIENT_ID
  */
 exports.POST = createRefreshHandler({
     idpBaseUrl: process.env.IDP_URL,
     clientId: process.env.CLIENT_ID || 'payez_default_client',
-    nextAuthSecret: process.env.NEXTAUTH_SECRET || '',
     refreshEndpoint: '/api/ExternalAuth/refresh'
 });

@@ -98,21 +98,23 @@ export interface VibeDocumentWrapper {
  * Vibe returns documents with a wrapper where actual data is a JSON string.
  *
  * @param doc - Raw Vibe document (wrapper format)
- * @returns Unwrapped document with id from document_id, or null if invalid
+ * @returns Unwrapped document with schema fields only.
+ *          Storage-layer document_id preserved as _vibe_doc_id for update/delete paths.
+ *          See PayEz-Core/docs/vibe-primary-key-standard.md
  *
  * @example
- * const raw = { document_id: 123, data: '{"name":"John","email":"john@example.com"}' };
+ * const raw = { document_id: 123, data: '{"user_id":15,"name":"John","email":"john@example.com"}' };
  * const unwrapped = unwrapVibeDocument(raw);
- * // => { id: 123, name: 'John', email: 'john@example.com' }
+ * // => { user_id: 15, name: 'John', email: 'john@example.com', _vibe_doc_id: 123 }
  */
 export function unwrapVibeDocument<T extends Record<string, unknown> = Record<string, unknown>>(
   doc: VibeDocumentWrapper | Record<string, unknown> | null | undefined
-): (T & { id: number; document_id: number }) | null {
+): (T & { _vibe_doc_id?: number }) | null {
   if (!doc) return null;
 
-  // Handle case where doc is already unwrapped (has id but no document_id)
-  if ('id' in doc && !('document_id' in doc)) {
-    return doc as T & { id: number; document_id: number };
+  // Handle case where doc is already unwrapped (has schema fields directly)
+  if (!('document_id' in doc) && !('data' in doc)) {
+    return doc as T & { _vibe_doc_id?: number };
   }
 
   const wrapper = doc as VibeDocumentWrapper;
@@ -129,13 +131,13 @@ export function unwrapVibeDocument<T extends Record<string, unknown> = Record<st
     parsedData = wrapper.data;
   }
 
-  const documentId = wrapper.document_id ?? (doc as any).id ?? 0;
+  // Preserve document_id as _vibe_doc_id for Vibe API update/delete paths only
+  const documentId = wrapper.document_id ?? (doc as any).document_id;
+  if (documentId != null) {
+    parsedData._vibe_doc_id = documentId;
+  }
 
-  return {
-    id: documentId,
-    document_id: documentId,
-    ...parsedData,
-  } as T & { id: number; document_id: number };
+  return parsedData as T & { _vibe_doc_id?: number };
 }
 
 /**
@@ -151,7 +153,7 @@ export function unwrapVibeDocument<T extends Record<string, unknown> = Record<st
  */
 export function extractVibeDocuments<T extends Record<string, unknown> = Record<string, unknown>>(
   responseData: unknown
-): Array<T & { id: number; document_id: number }> {
+): Array<T & { _vibe_doc_id?: number }> {
   if (!responseData || typeof responseData !== 'object') {
     return [];
   }
@@ -171,7 +173,7 @@ export function extractVibeDocuments<T extends Record<string, unknown> = Record<
 
   return docs
     .map((doc) => unwrapVibeDocument<T>(doc))
-    .filter((d): d is T & { id: number; document_id: number } => d !== null);
+    .filter((d): d is T & { _vibe_doc_id?: number } => d !== null);
 }
 
 // -----------------------------------------------------------------------------
@@ -196,7 +198,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Find multiple records with optional filtering and pagination.
    */
-  async findMany(options?: FindManyOptions<T>): Promise<FindManyResult<T & { id: number; document_id: number }>> {
+  async findMany(options?: FindManyOptions<T>): Promise<FindManyResult<T & { _vibe_doc_id?: number }>> {
     const params = new URLSearchParams();
 
     // Build filter params
@@ -257,7 +259,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
    * Find a single record by ID.
    * Throws VibeNotFoundError if not found.
    */
-  async findUnique(options: { where: { id: number } }): Promise<T & { id: number; document_id: number }> {
+  async findUnique(options: { where: { id: number } }): Promise<T & { _vibe_doc_id?: number }> {
     const path = vibeTablePath(this.collection, this.tableName, options.where.id);
     const url = `${this.client.getBaseUrl()}${path}`;
     const response = await this.client.request<VibeDocumentWrapper>(url, 'GET');
@@ -275,7 +277,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Find a single record by ID, returns null if not found.
    */
-  async findUniqueOrNull(options: { where: { id: number } }): Promise<(T & { id: number; document_id: number }) | null> {
+  async findUniqueOrNull(options: { where: { id: number } }): Promise<(T & { _vibe_doc_id?: number }) | null> {
     try {
       return await this.findUnique(options);
     } catch (error) {
@@ -289,7 +291,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Find the first record matching the filter.
    */
-  async findFirst(options?: FindManyOptions<T>): Promise<(T & { id: number; document_id: number }) | null> {
+  async findFirst(options?: FindManyOptions<T>): Promise<(T & { _vibe_doc_id?: number }) | null> {
     const result = await this.findMany({ ...options, take: 1 });
     return result.data[0] || null;
   }
@@ -297,7 +299,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Create a new record.
    */
-  async create(options: { data: Partial<T> }): Promise<T & { id: number; document_id: number }> {
+  async create(options: { data: Partial<T> }): Promise<T & { _vibe_doc_id?: number }> {
     const path = vibeTablePath(this.collection, this.tableName);
     const url = `${this.client.getBaseUrl()}${path}`;
     const response = await this.client.request<VibeDocumentWrapper>(url, 'POST', options.data);
@@ -311,7 +313,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Update an existing record by ID.
    */
-  async update(options: { where: { id: number }; data: Partial<T> }): Promise<T & { id: number; document_id: number }> {
+  async update(options: { where: { id: number }; data: Partial<T> }): Promise<T & { _vibe_doc_id?: number }> {
     const path = vibeTablePath(this.collection, this.tableName, options.where.id);
     const url = `${this.client.getBaseUrl()}${path}`;
     const response = await this.client.request<VibeDocumentWrapper>(url, 'PUT', options.data);
@@ -325,7 +327,7 @@ export class GenericTableDelegate<T extends Record<string, unknown> = Record<str
   /**
    * Delete a record by ID (soft delete).
    */
-  async delete(options: { where: { id: number } }): Promise<T & { id: number; document_id: number }> {
+  async delete(options: { where: { id: number } }): Promise<T & { _vibe_doc_id?: number }> {
     const path = vibeTablePath(this.collection, this.tableName, options.where.id);
     const url = `${this.client.getBaseUrl()}${path}`;
     const response = await this.client.request<VibeDocumentWrapper>(url, 'DELETE');

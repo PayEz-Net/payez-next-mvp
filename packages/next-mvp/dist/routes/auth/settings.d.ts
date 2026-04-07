@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 export interface PublicAuthSettings {
     enabledProviders: string[];
     allowPublicRegistration: boolean;
-    allowSocialLogin: boolean;
+    allowFederatedLogin: boolean;
     enablePasswordReset: boolean;
     require2FA: boolean;
     allowed2FAMethods: string[];

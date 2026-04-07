@@ -46,23 +46,18 @@ function addSecurityHeaders(response) {
     return response;
 }
 /**
- * Creates a signout handler for Next.js API routes
+ * Creates a signout handler for Next.js API routes.
  *
- * @param config Configuration for NextAuth
- * @returns Next.js POST handler function
+ * Better Auth resolves its session from cookies, so this handler takes no
+ * configuration. Use the default `POST` export below for typical usage.
  *
  * @example
  * ```typescript
  * // In your app's /app/api/auth/signout/route.ts
- * import { createSignoutHandler } from '@payez/next-mvp/api-handlers/auth/signout';
- *
- * export const POST = createSignoutHandler({
- *   nextAuthSecret: process.env.NEXTAUTH_SECRET!
- * });
+ * export { POST } from '@payez/next-mvp/api-handlers/auth/signout';
  * ```
  */
-function createSignoutHandler(config) {
-    const { nextAuthSecret } = config;
+function createSignoutHandler() {
     return async function POST(req) {
         const cookieStore = await (0, headers_1.cookies)();
         // Get app-slug prefixed cookie names
@@ -91,7 +86,8 @@ function createSignoutHandler(config) {
         // Get chunk cookies for cleanup count
         const chunkCookies = cookieStore.getAll()
             .filter(cookie => cookie.name.startsWith(`${sessionCookieName}.`));
-        // Decode NextAuth JWT to extract the Redis session UUID before deletion
+        // Decode the Better Auth session JWT to extract the Redis session UUID
+        // before deletion.
         let redisSessionToken = null;
         // First attempt: Better Auth getSession
         try {
@@ -178,9 +174,6 @@ function createSignoutHandler(config) {
     };
 }
 /**
- * Default export for backward compatibility
- * Requires environment variable: NEXTAUTH_SECRET
+ * Default POST export — drop-in for `app/api/auth/signout/route.ts`.
  */
-exports.POST = createSignoutHandler({
-    nextAuthSecret: process.env.NEXTAUTH_SECRET || ''
-});
+exports.POST = createSignoutHandler();

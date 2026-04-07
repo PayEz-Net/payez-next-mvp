@@ -75,16 +75,17 @@ export interface VibeDocumentWrapper {
  * Vibe returns documents with a wrapper where actual data is a JSON string.
  *
  * @param doc - Raw Vibe document (wrapper format)
- * @returns Unwrapped document with id from document_id, or null if invalid
+ * @returns Unwrapped document with schema fields only.
+ *          Storage-layer document_id preserved as _vibe_doc_id for update/delete paths.
+ *          See PayEz-Core/docs/vibe-primary-key-standard.md
  *
  * @example
- * const raw = { document_id: 123, data: '{"name":"John","email":"john@example.com"}' };
+ * const raw = { document_id: 123, data: '{"user_id":15,"name":"John","email":"john@example.com"}' };
  * const unwrapped = unwrapVibeDocument(raw);
- * // => { id: 123, name: 'John', email: 'john@example.com' }
+ * // => { user_id: 15, name: 'John', email: 'john@example.com', _vibe_doc_id: 123 }
  */
 export declare function unwrapVibeDocument<T extends Record<string, unknown> = Record<string, unknown>>(doc: VibeDocumentWrapper | Record<string, unknown> | null | undefined): (T & {
-    id: number;
-    document_id: number;
+    _vibe_doc_id?: number;
 }) | null;
 /**
  * Extract and unwrap array of documents from Vibe response.
@@ -98,8 +99,7 @@ export declare function unwrapVibeDocument<T extends Record<string, unknown> = R
  * const resumes = extractVibeDocuments(data);
  */
 export declare function extractVibeDocuments<T extends Record<string, unknown> = Record<string, unknown>>(responseData: unknown): Array<T & {
-    id: number;
-    document_id: number;
+    _vibe_doc_id?: number;
 }>;
 /**
  * Generic table delegate for dynamic collection/table access.
@@ -114,8 +114,7 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
      * Find multiple records with optional filtering and pagination.
      */
     findMany(options?: FindManyOptions<T>): Promise<FindManyResult<T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }>>;
     /**
      * Find a single record by ID.
@@ -126,8 +125,7 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
             id: number;
         };
     }): Promise<T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }>;
     /**
      * Find a single record by ID, returns null if not found.
@@ -137,15 +135,13 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
             id: number;
         };
     }): Promise<(T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }) | null>;
     /**
      * Find the first record matching the filter.
      */
     findFirst(options?: FindManyOptions<T>): Promise<(T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }) | null>;
     /**
      * Create a new record.
@@ -153,8 +149,7 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
     create(options: {
         data: Partial<T>;
     }): Promise<T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }>;
     /**
      * Update an existing record by ID.
@@ -165,8 +160,7 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
         };
         data: Partial<T>;
     }): Promise<T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }>;
     /**
      * Delete a record by ID (soft delete).
@@ -176,8 +170,7 @@ export declare class GenericTableDelegate<T extends Record<string, unknown> = Re
             id: number;
         };
     }): Promise<T & {
-        id: number;
-        document_id: number;
+        _vibe_doc_id?: number;
     }>;
     /**
      * Count records matching the filter.

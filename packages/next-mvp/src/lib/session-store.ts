@@ -22,6 +22,9 @@ const getSessionKey = (token: string) => `${getSessionPrefix()}${token}`;
 const getRefreshLockKey = (token: string) => `${getRefreshLockPrefix()}${token}`;
 const getSessionVersionKey = (token: string) => `${getSessionPrefix()}ver:${token}`;
 
+// Better Auth uses a different key format: ba:{appSlug}:{token}
+const getBetterAuthSessionKey = (token: string, appSlug?: string) => `ba:${appSlug || 'app'}:${token}`;
+
 const REFRESH_LOCK_TTL = 60; // 60 seconds
 const SESSION_TTL = 3 * 24 * 60 * 60; // 3 days in seconds (matches refresh token lifetime)
 
@@ -83,6 +86,47 @@ export async function getSession(sessionToken: string): Promise<SessionData | nu
     return JSON.parse(json) as SessionData;
   } catch {
     console.error('[SESSION-STORE] Failed to parse session data');
+    return null;
+  }
+}
+
+/**
+ * Retrieves a Better Auth session from Redis.
+ * Better Auth uses key format: ba:{appSlug}:{token}
+ *
+ * @param sessionToken The session token to look up.
+ * @param appSlug The app slug (defaults to 'idealvibe_online' or extracted from env).
+ * @returns The session data, or null if not found.
+ */
+export async function getBetterAuthSession(sessionToken: string, appSlug?: string): Promise<SessionData | null> {
+  if (!sessionToken) {
+    return null;
+  }
+  // Try to get appSlug from env if not provided
+  const slug = appSlug || process.env.CLIENT_ID || 'idealvibe_online';
+  const key = getBetterAuthSessionKey(sessionToken, slug);
+  const json = await redis.get(key);
+  if (!json) {
+    return null;
+  }
+  try {
+    const data = JSON.parse(json);
+    // Better Auth stores the session differently - extract user data
+    if (data.user) {
+      return {
+        userId: data.user.id || data.user.email,
+        email: data.user.email,
+        name: data.user.name,
+        idpAccessToken: data.idpTokens?.idpAccessToken,
+        idpRefreshToken: data.idpTokens?.idpRefreshToken,
+        idpAccessTokenExpires: data.idpTokens?.idpAccessTokenExpires,
+        mfaVerified: data.idpTokens?.mfaVerified ?? false,
+        roles: data.idpTokens?.roles || [],
+      } as SessionData;
+    }
+    return data as SessionData;
+  } catch {
+    console.error('[SESSION-STORE] Failed to parse Better Auth session data');
     return null;
   }
 }
@@ -436,7 +480,7 @@ export async function acquireRefreshLock(
     const result = await redis.set(lockKey, JSON.stringify(lockInfo), 'PX', REFRESH_LOCK_TTL * 1000, 'NX');
 
     if (result === 'OK') {
-      console.log('[SESSION-STORE] Refresh lock acquired', {
+      console.debug('[SESSION-STORE] Refresh lock acquired', {
         sessionToken: sessionToken.substring(0, 8) + '...',
         requestId,
         lockVersion
@@ -446,7 +490,7 @@ export async function acquireRefreshLock(
     } else {
       // Lock already exists, check if we should wait
       if (maxWaitMs > 0) {
-        console.log('[SESSION-STORE] Refresh lock already exists, waiting for release', {
+        console.debug('[SESSION-STORE] Refresh lock already exists, waiting for release', {
           sessionToken: sessionToken.substring(0, 8) + '...',
           requestId,
           maxWaitMs
@@ -560,7 +604,7 @@ export async function releaseRefreshLock(
     ) as number;
 
     if (result === 1) {
-      console.log('[SESSION-STORE] Refresh lock released successfully', {
+      console.debug('[SESSION-STORE] Refresh lock released successfully', {
         sessionToken: sessionToken.substring(0, 8) + '...',
         requestId,
         lockVersion

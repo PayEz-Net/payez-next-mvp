@@ -50,9 +50,6 @@ export interface AuthHandlerOptions {
   /** Maximum number of retry attempts on 401 (default: 1) */
   maxRetries?: number;
 
-  /** NextAuth secret for JWT decoding */
-  nextAuthSecret?: string;
-
   /** IDP base URL for refresh requests */
   idpBaseUrl?: string;
 
@@ -99,7 +96,6 @@ export function createAuthHandler(options: AuthHandlerOptions = {}) {
     refreshBuffer = 60, // 60 seconds - matches website-membership proven threshold
     retryOn401 = true,
     maxRetries = 1,
-    nextAuthSecret = process.env.NEXTAUTH_SECRET,
     idpBaseUrl = process.env.IDP_URL,
     clientId = process.env.CLIENT_ID || process.env.NEXT_PUBLIC_IDP_CLIENT_ID
   } = options;
@@ -337,6 +333,8 @@ export function createAuthHandler(options: AuthHandlerOptions = {}) {
    */
   function needsRefresh(auth: AuthContext): boolean {
     if (!autoRefresh) return false;
+    // No refresh token = nothing to refresh with, skip entirely
+    if (!auth.refreshToken) return false;
 
     // Check if we have token expiry information
     const token = auth.token as any;

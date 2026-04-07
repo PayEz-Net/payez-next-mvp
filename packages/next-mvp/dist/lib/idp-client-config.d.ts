@@ -5,7 +5,7 @@
  * - OAuth provider credentials (from Key Vault)
  * - 2FA/MFA settings
  * - Session configuration
- * - NextAuth secret
+ * - Better Auth signing secret
  * - Branding
  *
  * CACHING STRATEGY:
@@ -47,7 +47,11 @@ export interface BrandingConfig {
 export interface IDPClientConfig {
     clientId: string;
     clientSlug: string;
-    nextAuthSecret: string;
+    /**
+     * Cryptographic secret used by Better Auth to sign session JWTs.
+     * Historically named "nextAuthSecret" — kept under the new name now.
+     */
+    authSecret: string;
     configCacheTtlSeconds: number;
     oauthProviders: OAuthProviderConfig[];
     authSettings: AuthSettings;
@@ -69,6 +73,10 @@ export declare function getIDPClientConfig(forceRefresh?: boolean): Promise<IDPC
  * Clear the config cache (useful for testing or forced refresh)
  */
 export declare function clearConfigCache(): void;
+/**
+ * Clear the Redis config cache so the next fetch always goes to IDP.
+ */
+export declare function clearConfigRedisCache(): Promise<void>;
 /**
  * Get enabled OAuth providers from config
  */

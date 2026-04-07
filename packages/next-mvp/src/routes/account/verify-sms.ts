@@ -30,7 +30,7 @@ export { POST } from '../../api-handlers/account/verify-sms';
  * Environment variables used:
  * - IDP_URL or NEXT_PUBLIC_IDP_URL (default: http://localhost:32785)
  * - CLIENT_ID or NEXT_PUBLIC_IDP_CLIENT_ID (required)
- * - NEXTAUTH_SECRET (required)
+ * - BETTER_AUTH_SECRET (required — fetched from IDP at startup)
  *
  * Returns:
  * - Upgraded access token with MFA claim

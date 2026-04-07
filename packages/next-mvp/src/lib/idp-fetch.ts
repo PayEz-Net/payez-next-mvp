@@ -44,6 +44,16 @@ async function ensureFreshAccessToken(req: NextRequest): Promise<{ sessionToken?
     return {};
   }
   let session = await getSession(sessionToken);
+  // Fall back to Better Auth: decode session from cookies to get IDP tokens
+  if (!session?.idpAccessToken) {
+    try {
+      const { decodeSession } = await import('../server/decode-session');
+      const decoded = await decodeSession(req.cookies);
+      if (decoded?.sessionData?.idpAccessToken) {
+        session = decoded.sessionData;
+      }
+    } catch { /* decodeSession unavailable in edge */ }
+  }
   console.log('[IDP_FETCH] Redis session lookup:', {
     hasSession: !!session,
     hasAccessToken: !!session?.idpAccessToken,

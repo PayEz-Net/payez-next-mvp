@@ -267,7 +267,9 @@ export class ApiHandler {
       }
 
       const { session: sessionData } = sessionWithVersion;
-      let accessToken = sessionData.idpAccessToken || null;
+      // Sessions may store the access token under either field name
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let accessToken = sessionData.idpAccessToken || (sessionData as any).accessToken || null;
       let userRoles: string[] = Array.isArray(sessionData.roles) ? sessionData.roles : [];
 
       // Merge roles from JWT token
@@ -278,10 +280,19 @@ export class ApiHandler {
         }
       } catch { /* ignore */ }
 
-      // Check if token needs refresh
+      // Check if token needs refresh.
+      // Skip the optimization (hasRefreshToken check) when access token is missing —
+      // some session shapes store the refresh token under different field names,
+      // and we still want a refresh attempt to populate the access token.
       const thresholdMs = 5 * 60 * 1000;
-      const expires = sessionData.idpAccessTokenExpires || 0;
-      const needsRefresh = !accessToken || (expires - Date.now()) <= thresholdMs;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const expires = sessionData.idpAccessTokenExpires || (sessionData as any).accessTokenExpires || 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const hasRefreshToken = !!(sessionData.idpRefreshToken || (sessionData as any).refreshToken);
+      const accessTokenStale = !accessToken || (expires - Date.now()) <= thresholdMs;
+      // If we already have a fresh access token, skip refresh entirely (no lock).
+      // If we don't, only attempt refresh when we have a refresh token to use.
+      const needsRefresh = accessTokenStale && hasRefreshToken;
 
       if (needsRefresh) {
         const refreshResult = await this.handleCoordinatedRefresh(req, token, sessionData, ctx);
@@ -416,12 +427,18 @@ export class ApiHandler {
       // Double-check if still needs refresh
       const latest = await getSession(sessionToken);
       const thresholdMs = 5 * 60 * 1000;
-      const stillNeeds = !latest?.accessToken || ((latest?.accessTokenExpires || 0) - Date.now()) <= thresholdMs;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const latestAny = latest as any;
+      // Sessions may store the access token under either `accessToken` or `idpAccessToken`,
+      // and expiry under `accessTokenExpires` or `idpAccessTokenExpires`.
+      const latestAccessToken = latestAny?.accessToken || latestAny?.idpAccessToken;
+      const latestExpires = latestAny?.accessTokenExpires || latestAny?.idpAccessTokenExpires || 0;
+      const stillNeeds = !latestAccessToken || (latestExpires - Date.now()) <= thresholdMs;
 
-      if (!stillNeeds && latest?.accessToken) {
+      if (!stillNeeds && latestAccessToken) {
         return {
-          accessToken: latest.accessToken,
-          roles: Array.isArray(latest.roles) ? latest.roles : [],
+          accessToken: latestAccessToken,
+          roles: Array.isArray(latest?.roles) ? latest.roles : [],
         };
       }
 
@@ -438,10 +455,12 @@ export class ApiHandler {
       }
 
       const refreshed = await getSession(sessionToken);
-      if (refreshed?.accessToken) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const refreshedAccessToken = (refreshed as any)?.accessToken || (refreshed as any)?.idpAccessToken;
+      if (refreshedAccessToken) {
         return {
-          accessToken: refreshed.accessToken,
-          roles: Array.isArray(refreshed.roles) ? refreshed.roles : [],
+          accessToken: refreshedAccessToken,
+          roles: Array.isArray(refreshed?.roles) ? refreshed.roles : [],
         };
       }
 

@@ -1,11 +1,8 @@
 /**
- * Server-side auth utilities for Better Auth (v4.0)
+ * Server-side auth utilities for Better Auth.
  *
- * Replaces:
- * - getToken() from next-auth/jwt
- * - getServerSession() from next-auth
- *
- * All server-side auth flows go through the Better Auth instance.
+ * All server-side auth flows go through the Better Auth instance returned by
+ * getAuthInstance(); use getSession(req) for the request-scoped session.
  */
 import 'server-only';
 /**
@@ -26,13 +23,6 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
             enabled: true;
             maxAge: number;
             refreshCache: false;
-        };
-    };
-    databaseHooks: {
-        session: {
-            create: {
-                after: (session: any) => Promise<void>;
-            };
         };
     };
     advanced: {

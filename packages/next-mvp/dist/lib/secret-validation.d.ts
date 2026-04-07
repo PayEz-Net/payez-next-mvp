@@ -1,4 +1,4 @@
-export declare function validateNextAuthSecret(secret: string): {
+export declare function validateAuthSecret(secret: string): {
     valid: boolean;
     reason?: string;
 };

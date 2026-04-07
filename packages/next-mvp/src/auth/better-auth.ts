@@ -66,7 +66,7 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
 
   return betterAuth({
     baseURL,
-    secret: idpConfig.nextAuthSecret as string,
+    secret: idpConfig.authSecret as string,
 
     socialProviders: buildBetterAuthProviders(idpConfig),
 

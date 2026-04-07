@@ -1,4 +1,4 @@
-export function validateNextAuthSecret(secret: string): { valid: boolean; reason?: string } {
+export function validateAuthSecret(secret: string): { valid: boolean; reason?: string } {
   if (!secret || typeof secret !== 'string') return { valid: false, reason: 'missing' };
   if (secret.length < 32) return { valid: false, reason: 'too_short' };
   const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^a-zA-Z0-9]/];

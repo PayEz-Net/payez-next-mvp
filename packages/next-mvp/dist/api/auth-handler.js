@@ -39,7 +39,7 @@ const session_store_1 = require("../lib/session-store");
  */
 function createAuthHandler(options = {}) {
     const { requireAuth = true, autoRefresh = true, refreshBuffer = 60, // 60 seconds - matches website-membership proven threshold
-    retryOn401 = true, maxRetries = 1, nextAuthSecret = process.env.NEXTAUTH_SECRET, idpBaseUrl = process.env.IDP_URL, clientId = process.env.CLIENT_ID || process.env.NEXT_PUBLIC_IDP_CLIENT_ID } = options;
+    retryOn401 = true, maxRetries = 1, idpBaseUrl = process.env.IDP_URL, clientId = process.env.CLIENT_ID || process.env.NEXT_PUBLIC_IDP_CLIENT_ID } = options;
     /**
      * Performs coordinated token refresh with Redis locking
      * This prevents multiple concurrent requests from all trying to refresh simultaneously
@@ -234,6 +234,9 @@ function createAuthHandler(options = {}) {
      */
     function needsRefresh(auth) {
         if (!autoRefresh)
+            return false;
+        // No refresh token = nothing to refresh with, skip entirely
+        if (!auth.refreshToken)
             return false;
         // Check if we have token expiry information
         const token = auth.token;

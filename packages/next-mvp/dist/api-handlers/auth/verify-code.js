@@ -16,23 +16,18 @@ const server_1 = require("next/server");
 const auth_1 = require("../../server/auth");
 const session_store_1 = require("../../lib/session-store");
 /**
- * Creates a verify-code/complete-2FA handler for Next.js API routes
+ * Creates a verify-code/complete-2FA handler for Next.js API routes.
  *
- * @param config Configuration for NextAuth
- * @returns Next.js POST handler function
+ * Better Auth resolves its session from cookies, so this handler takes no
+ * configuration. Use the default `POST` export below for typical usage.
  *
  * @example
  * ```typescript
  * // In your app's /app/api/auth/verify-code/route.ts
- * import { createVerifyCodeHandler } from '@payez/next-mvp/api-handlers/auth/verify-code';
- *
- * export const POST = createVerifyCodeHandler({
- *   nextAuthSecret: process.env.NEXTAUTH_SECRET!
- * });
+ * export { POST } from '@payez/next-mvp/api-handlers/auth/verify-code';
  * ```
  */
-function createVerifyCodeHandler(config) {
-    const { nextAuthSecret } = config;
+function createVerifyCodeHandler() {
     return async function POST(req) {
         try {
             let body;
@@ -82,9 +77,6 @@ function createVerifyCodeHandler(config) {
     };
 }
 /**
- * Default export for backward compatibility
- * Requires environment variable: NEXTAUTH_SECRET
+ * Default POST export — drop-in for `app/api/auth/verify-code/route.ts`.
  */
-exports.POST = createVerifyCodeHandler({
-    nextAuthSecret: process.env.NEXTAUTH_SECRET || ''
-});
+exports.POST = createVerifyCodeHandler();

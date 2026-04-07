@@ -4,14 +4,14 @@
  * This module ensures that critical initialization tasks are completed
  * before the application serves requests.
  *
- * Now uses unified IDP client config for:
- * - NEXTAUTH_SECRET
+ * Uses unified IDP client config for:
+ * - BETTER_AUTH_SECRET (the Better Auth signing secret)
  * - OAuth provider configuration
  * - Auth settings (2FA, session timeouts, etc.)
  */
 
 import 'server-only';
-import { getIDPClientConfig, type IDPClientConfig } from './idp-client-config';
+import { getIDPClientConfig, clearConfigRedisCache, type IDPClientConfig } from './idp-client-config';
 
 let initializationStarted = false;
 let initializationComplete = false;
@@ -75,7 +75,7 @@ export function logStartupStatus(): void {
     console.log('║            🚀 PayEz Next MVP - Starting Up                    ║');
     console.log('║                                                              ║');
     console.log('║  Async initialization in progress...                         ║');
-    console.log('║  - Resolving NEXTAUTH_SECRET from IDP                       ║');
+    console.log('║  - Resolving BETTER_AUTH_SECRET from IDP                     ║');
     console.log('║  - Verifying environment configuration                       ║');
     console.log('║                                                              ║');
     console.log('║  Check logs below for detailed initialization status:        ║');
@@ -107,6 +107,9 @@ async function performInitialization(): Promise<void> {
     // Step 1: Fetch full client config from IDP (includes secret, providers, settings)
     console.log('[STARTUP] Step 1/2: Fetching client config from IDP...');
 
+    // Clear any stale Redis cache so startup always gets fresh IDP data
+    await clearConfigRedisCache();
+
     try {
       const config = await getIDPClientConfig(true);
       cachedIDPConfig = config;
@@ -114,16 +117,21 @@ async function performInitialization(): Promise<void> {
       console.log('[STARTUP] Client config loaded successfully');
       console.log('[STARTUP]    - Client ID:', config.clientId);
       console.log('[STARTUP]    - Client Slug:', config.clientSlug);
-      console.log('[STARTUP]    - Secret length:', config.nextAuthSecret?.length || 0, 'chars');
+      console.log('[STARTUP]    - Secret length:', config.authSecret?.length || 0, 'chars');
       console.log('[STARTUP]    - OAuth Providers:', config.oauthProviders?.filter(p => p.enabled).map(p => p.provider).join(', ') || 'none');
       console.log('[STARTUP]    - Require 2FA:', config.authSettings?.require2FA);
       console.log('[STARTUP]    - Cache TTL:', config.configCacheTtlSeconds, 'seconds');
       console.log('[STARTUP]    - Base Client URL:', config.baseClientUrl || '(not set)');
 
-      // Set NEXTAUTH_SECRET from IDP response if not already set
-      if (config.nextAuthSecret && !process.env.NEXTAUTH_SECRET) {
-        process.env.NEXTAUTH_SECRET = config.nextAuthSecret;
-        console.log('[STARTUP] Set NEXTAUTH_SECRET from IDP config');
+      // Set BETTER_AUTH_SECRET from IDP response if not already set.
+      // Also mirror to legacy NEXTAUTH_SECRET during the rename transition
+      // so any consumer code still reading the old name keeps working.
+      if (config.authSecret && !process.env.BETTER_AUTH_SECRET) {
+        process.env.BETTER_AUTH_SECRET = config.authSecret;
+        console.log('[STARTUP] Set BETTER_AUTH_SECRET from IDP config');
+      }
+      if (config.authSecret && !process.env.NEXTAUTH_SECRET) {
+        process.env.NEXTAUTH_SECRET = config.authSecret;
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -133,16 +141,16 @@ async function performInitialization(): Promise<void> {
       console.error('[STARTUP] No fallback available for auth secret resolution');
     }
 
-    // Step 2: Verify NEXTAUTH_SECRET is available - FAIL FAST if not
-    console.log('[STARTUP] Step 2/2: Verifying NEXTAUTH_SECRET...');
+    // Step 2: Verify BETTER_AUTH_SECRET is available - FAIL FAST if not
+    console.log('[STARTUP] Step 2/2: Verifying BETTER_AUTH_SECRET...');
 
-    const secret = process.env.NEXTAUTH_SECRET;
+    const secret = process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
     if (!secret || secret.trim() === '') {
       console.error('');
       console.error('╔══════════════════════════════════════════════════════════════╗');
-      console.error('║   ❌ FATAL: NEXTAUTH_SECRET NOT AVAILABLE                     ║');
+      console.error('║   ❌ FATAL: BETTER_AUTH_SECRET NOT AVAILABLE                  ║');
       console.error('║                                                              ║');
-      console.error('║   The app cannot start without a valid NEXTAUTH_SECRET.      ║');
+      console.error('║   The app cannot start without a valid auth signing secret.  ║');
       console.error('║   This should be fetched from IDP at startup.                ║');
       console.error('║                                                              ║');
       console.error('║   Possible causes:                                           ║');
@@ -152,10 +160,10 @@ async function performInitialization(): Promise<void> {
       console.error('║   • Network connectivity issue                               ║');
       console.error('╚══════════════════════════════════════════════════════════════╝');
       console.error('');
-      throw new Error('FATAL: NEXTAUTH_SECRET not available - cannot start without valid secret from IDP');
+      throw new Error('FATAL: BETTER_AUTH_SECRET not available - cannot start without valid secret from IDP');
     }
 
-    console.log('[STARTUP] NEXTAUTH_SECRET verified (' + secret.length + ' chars)');
+    console.log('[STARTUP] BETTER_AUTH_SECRET verified (' + secret.length + ' chars)');
 
     // Step 3: Validate cookie name consistency
     // This catches bugs where getJwtCookieName() returns a different name than
@@ -189,9 +197,9 @@ async function performInitialization(): Promise<void> {
 
     console.error(`
 ╔══════════════════════════════════════════════════════════════╗
-║   ❌ FATAL: NEXTAUTH_SECRET NOT AVAILABLE                     ║
+║   ❌ FATAL: BETTER_AUTH_SECRET NOT AVAILABLE                  ║
 ║                                                              ║
-║   The app cannot start without a valid NEXTAUTH_SECRET.      ║
+║   The app cannot start without a valid auth signing secret.  ║
 ║   This should be fetched from IDP at startup.                ║
 ║                                                              ║
 ${connectionLine}║   Possible causes:                                           ║
@@ -222,7 +230,7 @@ export function getStartupIDPConfig(): IDPClientConfig | null {
 }
 
 /**
- * Check if initialization failed (NEXTAUTH_SECRET couldn't be retrieved)
+ * Check if initialization failed (auth signing secret couldn't be retrieved)
  */
 export function isInitializationFailed(): boolean {
   return initializationFailed;

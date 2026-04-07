@@ -1,11 +1,10 @@
 /**
- * Better Auth Client (Phase 3)
+ * Better Auth Client.
  *
- * Drop-in replacement for next-auth/react hooks and functions.
  * Import from '@payez/next-mvp/client/better-auth-client'.
  *
- * Includes useSessionCompat() — returns NextAuth-shaped { data, status }
- * so existing components don't need destructure pattern changes.
+ * Includes useSessionCompat() — returns a { data, status } shape so existing
+ * components written against the legacy hook don't need destructure changes.
  */
 
 import { createAuthClient } from 'better-auth/react';
@@ -17,6 +16,7 @@ export const authClient = createAuthClient({
 
 // Convenience exports
 export const { useSession, signIn, signOut } = authClient;
+
 
 /**
  * NextAuth-compatible useSession wrapper.

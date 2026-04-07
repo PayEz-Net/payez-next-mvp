@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateSessionToken = generateSessionToken;
 exports.createSession = createSession;
 exports.getSession = getSession;
+exports.getBetterAuthSession = getBetterAuthSession;
 exports.touchSession = touchSession;
 exports.getSessionWithVersion = getSessionWithVersion;
 exports.isAccessTokenFresh = isAccessTokenFresh;
@@ -42,6 +43,8 @@ const token_utils_1 = require("../auth/utils/token-utils");
 const getSessionKey = (token) => `${(0, app_slug_1.getSessionPrefix)()}${token}`;
 const getRefreshLockKey = (token) => `${(0, app_slug_1.getRefreshLockPrefix)()}${token}`;
 const getSessionVersionKey = (token) => `${(0, app_slug_1.getSessionPrefix)()}ver:${token}`;
+// Better Auth uses a different key format: ba:{appSlug}:{token}
+const getBetterAuthSessionKey = (token, appSlug) => `ba:${appSlug || 'app'}:${token}`;
 const REFRESH_LOCK_TTL = 60; // 60 seconds
 const SESSION_TTL = 3 * 24 * 60 * 60; // 3 days in seconds (matches refresh token lifetime)
 /**
@@ -93,6 +96,47 @@ async function getSession(sessionToken) {
     }
     catch {
         console.error('[SESSION-STORE] Failed to parse session data');
+        return null;
+    }
+}
+/**
+ * Retrieves a Better Auth session from Redis.
+ * Better Auth uses key format: ba:{appSlug}:{token}
+ *
+ * @param sessionToken The session token to look up.
+ * @param appSlug The app slug (defaults to 'idealvibe_online' or extracted from env).
+ * @returns The session data, or null if not found.
+ */
+async function getBetterAuthSession(sessionToken, appSlug) {
+    if (!sessionToken) {
+        return null;
+    }
+    // Try to get appSlug from env if not provided
+    const slug = appSlug || process.env.CLIENT_ID || 'idealvibe_online';
+    const key = getBetterAuthSessionKey(sessionToken, slug);
+    const json = await redis_1.default.get(key);
+    if (!json) {
+        return null;
+    }
+    try {
+        const data = JSON.parse(json);
+        // Better Auth stores the session differently - extract user data
+        if (data.user) {
+            return {
+                userId: data.user.id || data.user.email,
+                email: data.user.email,
+                name: data.user.name,
+                idpAccessToken: data.idpTokens?.idpAccessToken,
+                idpRefreshToken: data.idpTokens?.idpRefreshToken,
+                idpAccessTokenExpires: data.idpTokens?.idpAccessTokenExpires,
+                mfaVerified: data.idpTokens?.mfaVerified ?? false,
+                roles: data.idpTokens?.roles || [],
+            };
+        }
+        return data;
+    }
+    catch {
+        console.error('[SESSION-STORE] Failed to parse Better Auth session data');
         return null;
     }
 }
@@ -364,7 +408,7 @@ async function acquireRefreshLock(sessionToken, requestId, maxWaitMs = 5000) {
         // Try to acquire the lock atomically
         const result = await redis_1.default.set(lockKey, JSON.stringify(lockInfo), 'PX', REFRESH_LOCK_TTL * 1000, 'NX');
         if (result === 'OK') {
-            console.log('[SESSION-STORE] Refresh lock acquired', {
+            console.debug('[SESSION-STORE] Refresh lock acquired', {
                 sessionToken: sessionToken.substring(0, 8) + '...',
                 requestId,
                 lockVersion
@@ -374,7 +418,7 @@ async function acquireRefreshLock(sessionToken, requestId, maxWaitMs = 5000) {
         else {
             // Lock already exists, check if we should wait
             if (maxWaitMs > 0) {
-                console.log('[SESSION-STORE] Refresh lock already exists, waiting for release', {
+                console.debug('[SESSION-STORE] Refresh lock already exists, waiting for release', {
                     sessionToken: sessionToken.substring(0, 8) + '...',
                     requestId,
                     maxWaitMs
@@ -462,7 +506,7 @@ async function releaseRefreshLock(sessionToken, requestId, lockVersion) {
     `;
         const result = await redis_1.default.eval(luaScript, 1, lockKey, requestId, lockVersion ? lockVersion.toString() : '');
         if (result === 1) {
-            console.log('[SESSION-STORE] Refresh lock released successfully', {
+            console.debug('[SESSION-STORE] Refresh lock released successfully', {
                 sessionToken: sessionToken.substring(0, 8) + '...',
                 requestId,
                 lockVersion

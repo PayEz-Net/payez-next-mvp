@@ -12,5 +12,7 @@ function isDemoMode() {
 function isAuthConfigured() {
     if (isDemoMode())
         return false;
-    return !!(process.env.NEXTAUTH_SECRET || (process.env.NEXT_CLIENT_ID && process.env.NEXT_CLIENT_PRIVATE_KEY_PEM));
+    return !!(process.env.BETTER_AUTH_SECRET ||
+        process.env.NEXTAUTH_SECRET ||
+        (process.env.NEXT_CLIENT_ID && process.env.NEXT_CLIENT_PRIVATE_KEY_PEM));
 }

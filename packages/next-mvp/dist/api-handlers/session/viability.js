@@ -13,8 +13,8 @@ const startup_init_1 = require("../../lib/startup-init");
 const idp_client_config_1 = require("../../lib/idp-client-config");
 async function GET(req) {
     try {
-        // Ensure initialization is complete
-        if (!process.env.NEXTAUTH_SECRET) {
+        // Ensure initialization is complete (auth signing secret resolved from IDP)
+        if (!process.env.BETTER_AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
             try {
                 await (0, startup_init_1.ensureInitialized)();
             }
@@ -45,7 +45,15 @@ async function GET(req) {
         }
         const sessionToken = betterAuthSession?.session?.token;
         if (betterAuthSession && sessionToken) {
-            const sessionData = await (0, session_store_1.getSession)(sessionToken);
+            // Try legacy session store first, then Better Auth format
+            let sessionData = await (0, session_store_1.getSession)(sessionToken);
+            if (!sessionData) {
+                // Better Auth stores sessions with ba:{appSlug}:{token} prefix
+                sessionData = await (0, session_store_1.getBetterAuthSession)(sessionToken);
+                if (sessionData) {
+                    console.log('[VIABILITY] Found session in Better Auth store');
+                }
+            }
             if (sessionData) {
                 // The session exists in Redis
                 // Check if access token is expired (for middleware decision-making)

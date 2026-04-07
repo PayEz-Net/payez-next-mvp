@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateNextAuthSecret = validateNextAuthSecret;
-function validateNextAuthSecret(secret) {
+exports.validateAuthSecret = validateAuthSecret;
+function validateAuthSecret(secret) {
     if (!secret || typeof secret !== 'string')
         return { valid: false, reason: 'missing' };
     if (secret.length < 32)

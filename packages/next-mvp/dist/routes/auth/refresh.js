@@ -17,10 +17,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.POST = POST;
 const refresh_1 = require("../../api-handlers/auth/refresh");
-const idp_client_config_1 = require("../../lib/idp-client-config");
-// Configuration is read at runtime from IDP config (cached)
-async function getConfig() {
-    const idpConfig = await (0, idp_client_config_1.getIDPClientConfig)();
+// Configuration is read at runtime from environment.
+function getConfig() {
     const idpBaseUrl = process.env.IDP_URL;
     if (!idpBaseUrl) {
         throw new Error('[IDP_URL] FATAL: IDP_URL environment variable is REQUIRED.');
@@ -28,7 +26,6 @@ async function getConfig() {
     return {
         idpBaseUrl,
         clientId: process.env.CLIENT_ID || process.env.NEXT_PUBLIC_IDP_CLIENT_ID || '',
-        nextAuthSecret: idpConfig.nextAuthSecret || '',
         refreshEndpoint: process.env.REFRESH_ENDPOINT || '/api/ExternalAuth/refresh',
     };
 }
@@ -38,14 +35,12 @@ async function getConfig() {
  * Environment variables used:
  * - IDP_URL (REQUIRED)
  * - CLIENT_ID or NEXT_PUBLIC_IDP_CLIENT_ID (required)
- * - NEXTAUTH_SECRET (required)
  * - REFRESH_ENDPOINT (default: /api/ExternalAuth/refresh)
  */
 let _handler = null;
 async function POST(req) {
     if (!_handler) {
-        const config = await getConfig();
-        _handler = (0, refresh_1.createRefreshHandler)(config);
+        _handler = (0, refresh_1.createRefreshHandler)(getConfig());
     }
     return _handler(req);
 }

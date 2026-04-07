@@ -14,7 +14,7 @@ export interface PublicAuthSettings {
 
     // Registration settings
     allowPublicRegistration: boolean;
-    allowSocialLogin: boolean;
+    allowFederatedLogin: boolean;
 
     // Password settings
     enablePasswordReset: boolean;
@@ -42,7 +42,7 @@ export async function GET() {
 
             // Registration - default to true if not specified
             allowPublicRegistration: true, // Could come from config.authSettings in future
-            allowSocialLogin: config.oauthProviders?.some(p => p.enabled) ?? false,
+            allowFederatedLogin: config.oauthProviders?.some(p => p.enabled) ?? false,
 
             // Password reset
             enablePasswordReset: true, // Could come from config.authSettings in future
@@ -65,7 +65,7 @@ export async function GET() {
             data: {
                 enabledProviders: [],
                 allowPublicRegistration: true,
-                allowSocialLogin: false,
+                allowFederatedLogin: false,
                 enablePasswordReset: true,
                 require2FA: true,
                 allowed2FAMethods: ['email', 'sms'],

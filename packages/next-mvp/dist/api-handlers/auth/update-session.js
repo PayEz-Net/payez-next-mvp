@@ -29,23 +29,18 @@ function addSecurityHeaders(response) {
     return response;
 }
 /**
- * Creates an update-session handler for Next.js API routes
+ * Creates an update-session handler for Next.js API routes.
  *
- * @param config Configuration for NextAuth
- * @returns Next.js POST handler function
+ * Better Auth resolves its session from cookies, so this handler takes no
+ * configuration. Use the default `POST` export below for typical usage.
  *
  * @example
  * ```typescript
  * // In your app's /app/api/auth/update-session/route.ts
- * import { createUpdateSessionHandler } from '@payez/next-mvp/api-handlers/auth/update-session';
- *
- * export const POST = createUpdateSessionHandler({
- *   nextAuthSecret: process.env.NEXTAUTH_SECRET!
- * });
+ * export { POST } from '@payez/next-mvp/api-handlers/auth/update-session';
  * ```
  */
-function createUpdateSessionHandler(config) {
-    const { nextAuthSecret } = config;
+function createUpdateSessionHandler() {
     return async function POST(req) {
         try {
             let body;
@@ -85,9 +80,6 @@ function createUpdateSessionHandler(config) {
     };
 }
 /**
- * Default export for backward compatibility
- * Requires environment variable: NEXTAUTH_SECRET
+ * Default POST export — drop-in for `app/api/auth/update-session/route.ts`.
  */
-exports.POST = createUpdateSessionHandler({
-    nextAuthSecret: process.env.NEXTAUTH_SECRET || ''
-});
+exports.POST = createUpdateSessionHandler();

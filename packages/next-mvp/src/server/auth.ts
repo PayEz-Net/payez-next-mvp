@@ -1,11 +1,8 @@
 /**
- * Server-side auth utilities for Better Auth (v4.0)
+ * Server-side auth utilities for Better Auth.
  *
- * Replaces:
- * - getToken() from next-auth/jwt
- * - getServerSession() from next-auth
- *
- * All server-side auth flows go through the Better Auth instance.
+ * All server-side auth flows go through the Better Auth instance returned by
+ * getAuthInstance(); use getSession(req) for the request-scoped session.
  */
 
 import 'server-only';
@@ -21,7 +18,7 @@ let authInitPromise: Promise<ReturnType<typeof createBetterAuthInstance>> | null
 export async function getAuthInstance() {
   if (authInstance) return authInstance;
   if (!authInitPromise) {
-    authInitPromise = getIDPClientConfig().then(config => {
+    authInitPromise = getIDPClientConfig(true).then(config => {
       authInstance = createBetterAuthInstance(config);
       return authInstance;
     });

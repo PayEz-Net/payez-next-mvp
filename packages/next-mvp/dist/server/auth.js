@@ -1,12 +1,9 @@
 "use strict";
 /**
- * Server-side auth utilities for Better Auth (v4.0)
+ * Server-side auth utilities for Better Auth.
  *
- * Replaces:
- * - getToken() from next-auth/jwt
- * - getServerSession() from next-auth
- *
- * All server-side auth flows go through the Better Auth instance.
+ * All server-side auth flows go through the Better Auth instance returned by
+ * getAuthInstance(); use getSession(req) for the request-scoped session.
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -57,7 +54,7 @@ async function getAuthInstance() {
     if (authInstance)
         return authInstance;
     if (!authInitPromise) {
-        authInitPromise = (0, idp_client_config_1.getIDPClientConfig)().then(config => {
+        authInitPromise = (0, idp_client_config_1.getIDPClientConfig)(true).then(config => {
             authInstance = (0, better_auth_1.createBetterAuthInstance)(config);
             return authInstance;
         });

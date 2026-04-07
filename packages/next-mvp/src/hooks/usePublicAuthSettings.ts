@@ -13,7 +13,7 @@ import type { FederatedProvider } from '../types/auth';
 export interface PublicAuthSettings {
     enabledProviders: FederatedProvider[];
     allowPublicRegistration: boolean;
-    allowSocialLogin: boolean;
+    allowFederatedLogin: boolean;
     enablePasswordReset: boolean;
     require2FA: boolean;
     allowed2FAMethods: string[];
@@ -38,7 +38,7 @@ const PROVIDER_MAP: Record<string, FederatedProvider> = {
 const DEFAULT_SETTINGS: PublicAuthSettings = {
     enabledProviders: [],
     allowPublicRegistration: true,
-    allowSocialLogin: false,
+    allowFederatedLogin: false,
     enablePasswordReset: true,
     require2FA: true,
     allowed2FAMethods: ['email', 'sms'],
@@ -56,7 +56,7 @@ const DEFAULT_SETTINGS: PublicAuthSettings = {
  *
  *   return (
  *     <>
- *       {settings?.allowSocialLogin && (
+ *       {settings?.allowFederatedLogin && (
  *         <FederatedAuthSection providers={settings.enabledProviders} />
  *       )}
  *       {settings?.allowPublicRegistration && (
@@ -125,11 +125,11 @@ export function usePublicAuthSettings(): UsePublicAuthSettingsResult {
 }
 
 /**
- * Hook to check if social login is enabled.
+ * Hook to check if federated (OAuth) login is enabled.
  */
-export function useSocialLoginEnabled(): boolean {
+export function useFederatedLoginEnabled(): boolean {
     const { settings } = usePublicAuthSettings();
-    return settings?.allowSocialLogin ?? false;
+    return settings?.allowFederatedLogin ?? false;
 }
 
 /**

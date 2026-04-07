@@ -35,6 +35,15 @@ export declare function createSession(data: SessionData): Promise<string>;
  */
 export declare function getSession(sessionToken: string): Promise<SessionData | null>;
 /**
+ * Retrieves a Better Auth session from Redis.
+ * Better Auth uses key format: ba:{appSlug}:{token}
+ *
+ * @param sessionToken The session token to look up.
+ * @param appSlug The app slug (defaults to 'idealvibe_online' or extracted from env).
+ * @returns The session data, or null if not found.
+ */
+export declare function getBetterAuthSession(sessionToken: string, appSlug?: string): Promise<SessionData | null>;
+/**
  * Refresh session TTL without reading/writing data (sliding window expiry).
  */
 export declare function touchSession(token: string): Promise<void>;

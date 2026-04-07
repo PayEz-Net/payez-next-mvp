@@ -14,7 +14,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.usePublicAuthSettings = usePublicAuthSettings;
-exports.useSocialLoginEnabled = useSocialLoginEnabled;
+exports.useFederatedLoginEnabled = useFederatedLoginEnabled;
 exports.usePublicRegistrationEnabled = usePublicRegistrationEnabled;
 exports.usePasswordResetEnabled = usePasswordResetEnabled;
 const react_1 = require("react");
@@ -30,7 +30,7 @@ const PROVIDER_MAP = {
 const DEFAULT_SETTINGS = {
     enabledProviders: [],
     allowPublicRegistration: true,
-    allowSocialLogin: false,
+    allowFederatedLogin: false,
     enablePasswordReset: true,
     require2FA: true,
     allowed2FAMethods: ['email', 'sms'],
@@ -47,7 +47,7 @@ const DEFAULT_SETTINGS = {
  *
  *   return (
  *     <>
- *       {settings?.allowSocialLogin && (
+ *       {settings?.allowFederatedLogin && (
  *         <FederatedAuthSection providers={settings.enabledProviders} />
  *       )}
  *       {settings?.allowPublicRegistration && (
@@ -109,11 +109,11 @@ function usePublicAuthSettings() {
     return { settings, isLoading, error };
 }
 /**
- * Hook to check if social login is enabled.
+ * Hook to check if federated (OAuth) login is enabled.
  */
-function useSocialLoginEnabled() {
+function useFederatedLoginEnabled() {
     const { settings } = usePublicAuthSettings();
-    return settings?.allowSocialLogin ?? false;
+    return settings?.allowFederatedLogin ?? false;
 }
 /**
  * Hook to check if public registration is enabled.

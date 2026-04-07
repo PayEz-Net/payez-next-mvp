@@ -31,8 +31,6 @@ export interface AuthHandlerOptions {
     retryOn401?: boolean;
     /** Maximum number of retry attempts on 401 (default: 1) */
     maxRetries?: number;
-    /** NextAuth secret for JWT decoding */
-    nextAuthSecret?: string;
     /** IDP base URL for refresh requests */
     idpBaseUrl?: string;
     /** OAuth client ID */

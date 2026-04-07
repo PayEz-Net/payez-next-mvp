@@ -5,15 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession as getRedisSession } from '../../lib/session-store';
+import { getSession as getRedisSession, getBetterAuthSession } from '../../lib/session-store';
 import { getSession } from '../../server/auth';
 import { isInitializationFailed, ensureInitialized } from '../../lib/startup-init';
 import { getIDPClientConfig } from '../../lib/idp-client-config';
 
 export async function GET(req: NextRequest) {
   try {
-    // Ensure initialization is complete
-    if (!process.env.NEXTAUTH_SECRET) {
+    // Ensure initialization is complete (auth signing secret resolved from IDP)
+    if (!process.env.BETTER_AUTH_SECRET && !process.env.NEXTAUTH_SECRET) {
       try {
         await ensureInitialized();
       } catch (error) {
@@ -53,7 +53,15 @@ export async function GET(req: NextRequest) {
 
     const sessionToken = betterAuthSession?.session?.token as string | undefined;
     if (betterAuthSession && sessionToken) {
-      const sessionData = await getRedisSession(sessionToken);
+      // Try legacy session store first, then Better Auth format
+      let sessionData = await getRedisSession(sessionToken);
+      if (!sessionData) {
+        // Better Auth stores sessions with ba:{appSlug}:{token} prefix
+        sessionData = await getBetterAuthSession(sessionToken);
+        if (sessionData) {
+          console.log('[VIABILITY] Found session in Better Auth store');
+        }
+      }
       if (sessionData) {
         // The session exists in Redis
 

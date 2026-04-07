@@ -40,11 +40,11 @@ const app_slug_1 = require("./app-slug");
 async function getTokenTestAware(req) {
     if (process.env.TEST_MODE === 'true') {
         try {
-            let secret = process.env.NEXTAUTH_SECRET;
+            let secret = process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
             if (!secret || secret.trim() === '') {
                 const { getIDPClientConfig } = await Promise.resolve().then(() => __importStar(require('./idp-client-config')));
                 const idpConfig = await getIDPClientConfig();
-                secret = idpConfig.nextAuthSecret;
+                secret = idpConfig.authSecret;
             }
             // Use app-slug prefixed cookie name
             const cookieName = (0, app_slug_1.getSessionCookieName)();
@@ -69,18 +69,17 @@ async function getTokenTestAware(req) {
             return null;
         }
     }
-    // Production path: use Better Auth session
+    // Production path: Better Auth session
     const session = await (0, auth_1.getSession)(req);
-    if (!session)
-        return null;
-    // Return a token-like object for backward compatibility with callers
-    // that access token.sub, token.email, token.sessionToken, token.roles, etc.
-    return {
-        sub: session.user?.id,
-        email: session.user?.email,
-        name: session.user?.name,
-        sessionToken: session.session?.token,
-        roles: session.user?.roles || [],
-        ...(session.user || {}),
-    };
+    if (session?.user && session?.session?.token) {
+        return {
+            sub: session.user.id,
+            email: session.user.email,
+            name: session.user.name,
+            sessionToken: session.session.token,
+            roles: session.user.roles || [],
+            ...session.user,
+        };
+    }
+    return null;
 }

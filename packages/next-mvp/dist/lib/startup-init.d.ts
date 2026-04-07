@@ -4,8 +4,8 @@
  * This module ensures that critical initialization tasks are completed
  * before the application serves requests.
  *
- * Now uses unified IDP client config for:
- * - NEXTAUTH_SECRET
+ * Uses unified IDP client config for:
+ * - BETTER_AUTH_SECRET (the Better Auth signing secret)
  * - OAuth provider configuration
  * - Auth settings (2FA, session timeouts, etc.)
  */
@@ -27,7 +27,7 @@ export declare function logStartupStatus(): void;
  */
 export declare function getStartupIDPConfig(): IDPClientConfig | null;
 /**
- * Check if initialization failed (NEXTAUTH_SECRET couldn't be retrieved)
+ * Check if initialization failed (auth signing secret couldn't be retrieved)
  */
 export declare function isInitializationFailed(): boolean;
 /**

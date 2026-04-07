@@ -53,18 +53,10 @@ const startup_init_1 = require("../lib/startup-init");
  */
 async function tryBetterAuthSession(requestCookies) {
     try {
-        const { getBetterAuthHandler } = await Promise.resolve().then(() => __importStar(require('../auth/better-auth')));
-        // getBetterAuthHandler initializes the instance; we need the raw instance
-        const { default: getBetterAuthInstanceFn } = await Promise.resolve().then(() => __importStar(require('../auth/better-auth'))).then(m => ({ default: m.getBetterAuthInstance || null }))
-            .catch(() => ({ default: null }));
-        // Access the cached instance via the module's internal getter
+        const { getBetterAuthInstance } = await Promise.resolve().then(() => __importStar(require('../auth/better-auth')));
         let auth = null;
         try {
-            // Force handler init which caches the instance, then use the API
-            await getBetterAuthHandler();
-            // The instance is cached in the module — re-import to access it
-            const mod = await Promise.resolve().then(() => __importStar(require('../auth/better-auth')));
-            auth = mod.__betterAuthInstance;
+            auth = await getBetterAuthInstance();
         }
         catch {
             return null;
@@ -99,7 +91,7 @@ async function tryBetterAuthSession(requestCookies) {
         if (!result?.session || !result?.user) {
             return null;
         }
-        // Read IDP tokens from BA Redis session (stored by post-login hook)
+        // Read IDP tokens from BA Redis session (stored by callback route after OAuth)
         let idpTokens = null;
         try {
             const { getRedis } = await Promise.resolve().then(() => __importStar(require('../lib/redis')));
@@ -122,8 +114,17 @@ async function tryBetterAuthSession(requestCookies) {
             idpRefreshToken: idpTokens?.idpRefreshToken,
             idpAccessTokenExpires: idpTokens?.idpAccessTokenExpires
                 || (result.session.expiresAt ? new Date(result.session.expiresAt).getTime() : Date.now() + 24 * 60 * 60 * 1000),
-            mfaVerified: true,
+            mfaVerified: idpTokens?.mfaVerified ?? false,
             oauthProvider: 'google',
+        };
+        // Backwards compat: session.user.email works alongside session.email
+        sessionData.user = {
+            id: sessionData.userId,
+            email: sessionData.email,
+            name: sessionData.name,
+            roles: sessionData.roles,
+            image: result.user.image,
+            oauthProvider: sessionData.oauthProvider,
         };
         const jwtPayload = {
             sub: result.user.id,
@@ -165,9 +166,9 @@ async function decodeSession(requestCookies) {
             return null;
         }
         const config = await (0, idp_client_config_1.getIDPClientConfig)();
-        const secret = config.nextAuthSecret;
+        const secret = config.authSecret;
         if (!secret) {
-            console.error('[DECODE-SESSION] No nextAuthSecret available from IDP config');
+            console.error('[DECODE-SESSION] No authSecret available from IDP config');
             return null;
         }
         const secretKey = new TextEncoder().encode(secret);
@@ -188,6 +189,15 @@ async function decodeSession(requestCookies) {
         const sessionData = await (0, session_store_1.getSession)(sessionToken);
         if (!sessionData) {
             return null;
+        }
+        // Backwards compat: session.user.email works alongside session.email
+        if (!sessionData.user) {
+            sessionData.user = {
+                id: sessionData.userId,
+                email: sessionData.email,
+                name: sessionData.name,
+                roles: sessionData.roles,
+            };
         }
         return {
             sessionData,
