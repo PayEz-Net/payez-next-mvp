@@ -119,15 +119,18 @@ export function createStatsHandler(config: AdminStatsHandlerConfig) {
       if (adminCheck.error) return adminCheck.error;
 
       try {
-        // Fetch from 3 sources in parallel
-        const [usersResult, sessionCount, auditResult] = await Promise.allSettled([
-          // 1. Users + tier breakdown via HMAC proxy (Vibe collection query)
+        // Fetch from 4 sources in parallel
+        const [usersResult, tierDistributionResult, sessionCount, auditResult] = await Promise.allSettled([
+          // 1. Users count via HMAC proxy (Vibe collection query)
           vibeServiceRequest<any>('/v1/collections/vibe_app/tables/users/query', {
             method: 'POST',
             body: { page: 1, pageSize: 500, orderBy: 'created_at', orderDirection: 'desc' },
           }),
 
-          // 2. Active sessions from Redis
+          // 2. Tier distribution from analytics endpoint (uses purchases table)
+          vibeServiceRequest<any>('/v1/analytics/tier-distribution?includeTrend=false', { method: 'GET' }),
+
+          // 3. Active sessions from Redis
           (async () => {
             const redis = getRedis();
             const sessionPrefix = getSessionPrefix();
@@ -141,13 +144,12 @@ export function createStatsHandler(config: AdminStatsHandlerConfig) {
             return sessionKeys.length;
           })(),
 
-          // 3. Recent audit activity via HMAC proxy
+          // 4. Recent audit activity via HMAC proxy
           vibeServiceRequest<any>('/v1/audit?pageSize=10&sortDir=desc', { method: 'GET' }),
         ]);
 
         // Parse users — deduplicate by user_id
         let totalUsers = 0;
-        let tierBreakdown: Record<string, number> = {};
         if (usersResult.status === 'fulfilled' && usersResult.value.ok && usersResult.value.data) {
           const data = usersResult.value.data;
           const rawUsers = data.data || data.documents || data.users || [];
@@ -161,17 +163,26 @@ export function createStatsHandler(config: AdminStatsHandlerConfig) {
               userMap.set(uid, u);
             }
           }
-          const uniqueUsers = Array.from(userMap.values());
-          totalUsers = uniqueUsers.length;
+          totalUsers = userMap.size;
+        }
 
-          // Build tier breakdown from deduplicated users (unless API provides one)
-          tierBreakdown = data.tierBreakdown || data.tiers || {};
-          if (Object.keys(tierBreakdown).length === 0) {
-            for (const user of uniqueUsers) {
-              const tier = user.tier || 'free';
-              tierBreakdown[tier] = (tierBreakdown[tier] || 0) + 1;
+        // Parse tier distribution from analytics endpoint (uses purchases table)
+        let tierBreakdown: Record<string, number> = {};
+        if (tierDistributionResult.status === 'fulfilled' && tierDistributionResult.value.ok && tierDistributionResult.value.data) {
+          const data = tierDistributionResult.value.data;
+          // Handle response shape: { distribution: [{ tierKey, userCount }, ...] }
+          const distribution = data.distribution || data.data || data.tiers || [];
+          if (Array.isArray(distribution)) {
+            for (const item of distribution) {
+              const tierKey = item.tierKey || item.tier || item.name || 'free';
+              const count = item.userCount || item.count || item.users || 0;
+              tierBreakdown[tierKey] = (tierBreakdown[tierKey] || 0) + count;
             }
           }
+        }
+        // Fallback: if no tier data from analytics, show all as free
+        if (Object.keys(tierBreakdown).length === 0) {
+          tierBreakdown = { free: totalUsers };
         }
 
         // Parse active sessions count
