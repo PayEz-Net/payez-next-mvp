@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2026-04-17
+
+### Added
+- **Better Auth `magic-link` plugin support** in `createBetterAuthInstance`. Opt-in via new `CreateBetterAuthInstanceOptions.magicLink` parameter, which accepts Better Auth's `MagicLinkOptions` verbatim — the host app supplies its own `sendMagicLink` callback (typically a fetch to its email service). Omit the `magicLink` option to skip the plugin entirely (backward-compatible; consumers who don't need magic-link see no behavior change).
+- **`configureBetterAuth(opts)`** — new exported function that stores instance options for `getBetterAuthInstance()` to apply on first resolve. Call once at app startup (e.g., from Next.js `instrumentation.ts`). Throws if called after the instance has already been resolved.
+- Magic-link-created sessions land in the same `ba:{appSlug}:{token}` Redis keyspace as OAuth sessions, so `getBetterAuthSession()`, `authClient.useSession()`, and existing middleware resolve both flows uniformly (fixes the keyspace split where custom magic-link flows wrote sessions outside Better Auth's lookup).
+
 ## [2.0.0] - 2025-10-26
 
 ### 🚨 BREAKING CHANGES

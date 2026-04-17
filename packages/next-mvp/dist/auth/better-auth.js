@@ -47,6 +47,7 @@ exports.__betterAuthInstance = void 0;
 exports.buildBetterAuthProviders = buildBetterAuthProviders;
 exports.createBetterAuthInstance = createBetterAuthInstance;
 exports.isBetterAuthEnabled = isBetterAuthEnabled;
+exports.configureBetterAuth = configureBetterAuth;
 exports.getBetterAuthInstance = getBetterAuthInstance;
 exports.getBetterAuthHandler = getBetterAuthHandler;
 exports.exchangeOAuthForIdpTokens = exchangeOAuthForIdpTokens;
@@ -55,6 +56,7 @@ require("server-only");
 const better_auth_1 = require("better-auth");
 const next_js_1 = require("better-auth/next-js");
 const next_js_2 = require("better-auth/next-js");
+const magic_link_1 = require("better-auth/plugins/magic-link");
 const idp_client_config_1 = require("../lib/idp-client-config");
 const app_slug_1 = require("../lib/app-slug");
 const redis_1 = require("../lib/redis");
@@ -81,7 +83,7 @@ function buildBetterAuthProviders(config) {
  * No database — runs in stateless mode with JWE cookie cache.
  * Call after getIDPClientConfig() resolves.
  */
-function createBetterAuthInstance(idpConfig) {
+function createBetterAuthInstance(idpConfig, opts = {}) {
     const appSlug = idpConfig.clientSlug || (0, app_slug_1.getAppSlug)();
     // Resolve base URL: BETTER_AUTH_URL env > IDP config > localhost fallback
     // Must include /api/auth since that's where the catch-all route is mounted
@@ -149,6 +151,7 @@ function createBetterAuthInstance(idpConfig) {
         },
         plugins: [
             (0, next_js_1.nextCookies)(),
+            ...(opts.magicLink ? [(0, magic_link_1.magicLink)(opts.magicLink)] : []),
         ],
     });
 }
@@ -167,12 +170,31 @@ let cachedInstance = null;
 exports.__betterAuthInstance = cachedInstance;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let initPromise = null;
+let configuredOpts = {};
+/**
+ * Configure Better Auth instance options for this process.
+ *
+ * Must be called before the first auth request — before
+ * `getBetterAuthInstance()` caches an instance. Typically called once at
+ * app startup, e.g. from Next.js `instrumentation.ts` or an equivalent
+ * server bootstrap hook.
+ *
+ * Throws if called after the instance has already been resolved: options
+ * cannot be applied retroactively.
+ */
+function configureBetterAuth(opts) {
+    if (cachedInstance) {
+        throw new Error('[BETTER_AUTH] configureBetterAuth() must run before the instance is first resolved. ' +
+            'Call it in Next.js instrumentation.ts or an equivalent startup hook.');
+    }
+    configuredOpts = opts;
+}
 async function getBetterAuthInstance() {
     if (cachedInstance)
         return cachedInstance;
     if (!initPromise) {
         initPromise = (0, idp_client_config_1.getIDPClientConfig)(true).then(config => {
-            const instance = createBetterAuthInstance(config);
+            const instance = createBetterAuthInstance(config, configuredOpts);
             exports.__betterAuthInstance = cachedInstance = instance;
             console.log('[BETTER_AUTH] Instance created for', config.clientSlug || config.clientId);
             return instance;

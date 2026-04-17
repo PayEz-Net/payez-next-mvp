@@ -13,6 +13,7 @@ import 'server-only';
 import { betterAuth } from 'better-auth';
 import { nextCookies } from 'better-auth/next-js';
 import { toNextJsHandler } from 'better-auth/next-js';
+import { magicLink, type MagicLinkOptions } from 'better-auth/plugins/magic-link';
 import type { IDPClientConfig } from '../lib/idp-client-config';
 import { getIDPClientConfig } from '../lib/idp-client-config';
 import { getAppSlug } from '../lib/app-slug';
@@ -49,12 +50,28 @@ export function buildBetterAuthProviders(
 }
 
 /**
+ * Optional configuration for `createBetterAuthInstance`.
+ *
+ * - `magicLink`: if provided, registers Better Auth's magic-link plugin.
+ *   The host app supplies its own `sendMagicLink` callback — typically a
+ *   fetch to its email service (e.g. ACP's `/v1/auth/magic-link/email`).
+ *   Omit the `magicLink` key entirely to skip the plugin; the consuming
+ *   app will not have a magic-link flow.
+ */
+export interface CreateBetterAuthInstanceOptions {
+  magicLink?: MagicLinkOptions;
+}
+
+/**
  * Create Better Auth instance from IDP config.
  *
  * No database — runs in stateless mode with JWE cookie cache.
  * Call after getIDPClientConfig() resolves.
  */
-export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
+export function createBetterAuthInstance(
+  idpConfig: IDPClientConfig,
+  opts: CreateBetterAuthInstanceOptions = {}
+) {
   const appSlug = idpConfig.clientSlug || getAppSlug();
 
   // Resolve base URL: BETTER_AUTH_URL env > IDP config > localhost fallback
@@ -124,6 +141,7 @@ export function createBetterAuthInstance(idpConfig: IDPClientConfig) {
 
     plugins: [
       nextCookies(),
+      ...(opts.magicLink ? [magicLink(opts.magicLink)] : []),
     ],
   });
 }
@@ -143,17 +161,39 @@ export function isBetterAuthEnabled(): boolean {
 let cachedInstance: any = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let initPromise: Promise<any> | null = null;
+let configuredOpts: CreateBetterAuthInstanceOptions = {};
 
 // Expose for server-side session access (decode-session.ts)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export { cachedInstance as __betterAuthInstance };
+
+/**
+ * Configure Better Auth instance options for this process.
+ *
+ * Must be called before the first auth request — before
+ * `getBetterAuthInstance()` caches an instance. Typically called once at
+ * app startup, e.g. from Next.js `instrumentation.ts` or an equivalent
+ * server bootstrap hook.
+ *
+ * Throws if called after the instance has already been resolved: options
+ * cannot be applied retroactively.
+ */
+export function configureBetterAuth(opts: CreateBetterAuthInstanceOptions): void {
+  if (cachedInstance) {
+    throw new Error(
+      '[BETTER_AUTH] configureBetterAuth() must run before the instance is first resolved. ' +
+      'Call it in Next.js instrumentation.ts or an equivalent startup hook.'
+    );
+  }
+  configuredOpts = opts;
+}
 
 export async function getBetterAuthInstance() {
   if (cachedInstance) return cachedInstance;
 
   if (!initPromise) {
     initPromise = getIDPClientConfig(true).then(config => {
-      const instance = createBetterAuthInstance(config);
+      const instance = createBetterAuthInstance(config, configuredOpts);
       cachedInstance = instance;
       console.log('[BETTER_AUTH] Instance created for', config.clientSlug || config.clientId);
       return instance;
