@@ -12,9 +12,11 @@ exports.signOut = exports.signIn = exports.useSession = exports.authClient = voi
 exports.useSessionCompat = useSessionCompat;
 exports.signOutCompat = signOutCompat;
 const react_1 = require("better-auth/react");
+const plugins_1 = require("better-auth/client/plugins");
 const react_2 = require("react");
 exports.authClient = (0, react_1.createAuthClient)({
-// baseURL derived from BETTER_AUTH_URL or window.location.origin
+    // baseURL derived from BETTER_AUTH_URL or window.location.origin
+    plugins: [(0, plugins_1.magicLinkClient)()],
 });
 // Convenience exports
 exports.useSession = exports.authClient.useSession, exports.signIn = exports.authClient.signIn, exports.signOut = exports.authClient.signOut;

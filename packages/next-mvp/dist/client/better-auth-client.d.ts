@@ -8,8 +8,74 @@
  */
 export declare const authClient: {
     signIn: {
+        magicLink: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
+            email: string;
+            name?: string | undefined;
+            callbackURL?: string | undefined;
+            newUserCallbackURL?: string | undefined;
+            errorCallbackURL?: string | undefined;
+            metadata?: Record<string, any> | undefined;
+        }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
+            email: string;
+            name?: string | undefined;
+            callbackURL?: string | undefined;
+            newUserCallbackURL?: string | undefined;
+            errorCallbackURL?: string | undefined;
+            metadata?: Record<string, any> | undefined;
+        } & {
+            fetchOptions?: FetchOptions | undefined;
+        }>, data_1?: FetchOptions | undefined) => Promise<import("@better-fetch/fetch").BetterFetchResponse<{
+            status: boolean;
+        }, {
+            code?: string | undefined;
+            message?: string | undefined;
+        }, FetchOptions["throw"] extends true ? true : false>>;
+    };
+} & {
+    magicLink: {
+        verify: <FetchOptions extends import("@better-auth/core").ClientFetchOption<never, Partial<{
+            token: string;
+            callbackURL?: string | undefined;
+            errorCallbackURL?: string | undefined;
+            newUserCallbackURL?: string | undefined;
+        }> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
+            query: {
+                token: string;
+                callbackURL?: string | undefined;
+                errorCallbackURL?: string | undefined;
+                newUserCallbackURL?: string | undefined;
+            };
+            fetchOptions?: FetchOptions | undefined;
+        }>, data_1?: FetchOptions | undefined) => Promise<import("@better-fetch/fetch").BetterFetchResponse<Omit<{
+            token: string;
+            user: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            };
+        }, "user"> & {
+            user: import("better-auth/react").StripEmptyObjects<{
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                email: string;
+                emailVerified: boolean;
+                name: string;
+                image?: string | null | undefined;
+            }>;
+        }, {
+            code?: string | undefined;
+            message?: string | undefined;
+        }, FetchOptions["throw"] extends true ? true : false>>;
+    };
+} & {
+    signIn: {
         social: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
-            provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
+            provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
             callbackURL?: string | undefined;
             newUserCallbackURL?: string | undefined;
             errorCallbackURL?: string | undefined;
@@ -33,7 +99,7 @@ export declare const authClient: {
             loginHint?: string | undefined;
             additionalData?: Record<string, any> | undefined;
         }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
-            provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
+            provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
             callbackURL?: string | undefined;
             newUserCallbackURL?: string | undefined;
             errorCallbackURL?: string | undefined;
@@ -333,7 +399,107 @@ export declare const authClient: {
     updateUser: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<Partial<{}> & {
         name?: string | undefined;
         image?: string | undefined | null;
-    }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0?: import("better-auth/react").Prettify<import("better-auth/dist/client/path-to-object.mjs").InferUserUpdateCtx<{}, FetchOptions>> | undefined, data_1?: FetchOptions | undefined) => Promise<import("@better-fetch/fetch").BetterFetchResponse<{
+    }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0?: import("better-auth/react").Prettify<import("better-auth/dist/client/path-to-object.mjs").InferUserUpdateCtx<{
+        plugins: {
+            id: "magic-link";
+            $InferServerPlugin: ReturnType<(options: import("better-auth/plugins/magic-link").MagicLinkOptions) => {
+                id: "magic-link";
+                endpoints: {
+                    signInMagicLink: import("better-call").StrictEndpoint<"/sign-in/magic-link", {
+                        method: "POST";
+                        requireHeaders: true;
+                        body: import("zod").ZodObject<{
+                            email: import("zod").ZodEmail;
+                            name: import("zod").ZodOptional<import("zod").ZodString>;
+                            callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                            newUserCallbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                            errorCallbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                            metadata: import("zod").ZodOptional<import("zod").ZodRecord<import("zod").ZodString, import("zod").ZodAny>>;
+                        }, import("better-auth/*").$strip>;
+                        metadata: {
+                            openapi: {
+                                operationId: string;
+                                description: string;
+                                responses: {
+                                    200: {
+                                        description: string;
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    type: "object";
+                                                    properties: {
+                                                        status: {
+                                                            type: string;
+                                                        };
+                                                    };
+                                                };
+                                            };
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                    }, {
+                        status: boolean;
+                    }>;
+                    magicLinkVerify: import("better-call").StrictEndpoint<"/magic-link/verify", {
+                        method: "GET";
+                        query: import("zod").ZodObject<{
+                            token: import("zod").ZodString;
+                            callbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                            errorCallbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                            newUserCallbackURL: import("zod").ZodOptional<import("zod").ZodString>;
+                        }, import("better-auth/*").$strip>;
+                        use: ((inputContext: import("better-call").MiddlewareInputContext<import("better-call").MiddlewareOptions>) => Promise<void>)[];
+                        requireHeaders: true;
+                        metadata: {
+                            openapi: {
+                                operationId: string;
+                                description: string;
+                                responses: {
+                                    200: {
+                                        description: string;
+                                        content: {
+                                            "application/json": {
+                                                schema: {
+                                                    type: "object";
+                                                    properties: {
+                                                        session: {
+                                                            $ref: string;
+                                                        };
+                                                        user: {
+                                                            $ref: string;
+                                                        };
+                                                    };
+                                                };
+                                            };
+                                        };
+                                    };
+                                };
+                            };
+                        };
+                    }, {
+                        token: string;
+                        user: {
+                            id: string;
+                            createdAt: Date;
+                            updatedAt: Date;
+                            email: string;
+                            emailVerified: boolean;
+                            name: string;
+                            image?: string | null | undefined;
+                        };
+                    }>;
+                };
+                rateLimit: {
+                    pathMatcher(path: string): boolean;
+                    window: number;
+                    max: number;
+                }[];
+                options: import("better-auth/plugins/magic-link").MagicLinkOptions;
+            }>;
+        }[];
+    }, FetchOptions>> | undefined, data_1?: FetchOptions | undefined) => Promise<import("@better-fetch/fetch").BetterFetchResponse<{
         status: boolean;
     }, {
         code?: string | undefined;
@@ -826,8 +992,31 @@ export declare const useSession: () => {
         query?: import("better-auth/types").SessionQueryParams;
     } | undefined) => Promise<void>;
 }, signIn: {
+    magicLink: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
+        email: string;
+        name?: string | undefined;
+        callbackURL?: string | undefined;
+        newUserCallbackURL?: string | undefined;
+        errorCallbackURL?: string | undefined;
+        metadata?: Record<string, any> | undefined;
+    }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
+        email: string;
+        name?: string | undefined;
+        callbackURL?: string | undefined;
+        newUserCallbackURL?: string | undefined;
+        errorCallbackURL?: string | undefined;
+        metadata?: Record<string, any> | undefined;
+    } & {
+        fetchOptions?: FetchOptions | undefined;
+    }>, data_1?: FetchOptions | undefined) => Promise<import("@better-fetch/fetch").BetterFetchResponse<{
+        status: boolean;
+    }, {
+        code?: string | undefined;
+        message?: string | undefined;
+    }, FetchOptions["throw"] extends true ? true : false>>;
+} & {
     social: <FetchOptions extends import("@better-auth/core").ClientFetchOption<Partial<{
-        provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
+        provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
         callbackURL?: string | undefined;
         newUserCallbackURL?: string | undefined;
         errorCallbackURL?: string | undefined;
@@ -851,7 +1040,7 @@ export declare const useSession: () => {
         loginHint?: string | undefined;
         additionalData?: Record<string, any> | undefined;
     }> & Record<string, any>, Partial<Record<string, any>> & Record<string, any>, Record<string, any> | undefined>>(data_0: import("better-auth/react").Prettify<{
-        provider: "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "huggingface" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linear" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat" | (string & {});
+        provider: (string & {}) | "linear" | "huggingface" | "github" | "apple" | "atlassian" | "cognito" | "discord" | "facebook" | "figma" | "microsoft" | "google" | "slack" | "spotify" | "twitch" | "twitter" | "dropbox" | "kick" | "linkedin" | "gitlab" | "tiktok" | "reddit" | "roblox" | "salesforce" | "vk" | "zoom" | "notion" | "kakao" | "naver" | "line" | "paybin" | "paypal" | "polar" | "railway" | "vercel" | "wechat";
         callbackURL?: string | undefined;
         newUserCallbackURL?: string | undefined;
         errorCallbackURL?: string | undefined;

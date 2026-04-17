@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.1] - 2026-04-17
+
+### Added
+- **`magicLinkClient()` wired into `authClient`** in `@payez/next-mvp/client/better-auth-client`. Consumers can now call `authClient.signIn.magicLink({ email, callbackURL })` idiomatically instead of POSTing directly to the catch-all route. Typed errors + autocomplete + matches Better Auth's canonical client usage. Server-side contract from 4.1.0 unchanged; 4.1.0 consumers remain wire-compatible.
+
 ## [4.1.0] - 2026-04-17
 
 ### Added

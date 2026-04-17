@@ -8,10 +8,12 @@
  */
 
 import { createAuthClient } from 'better-auth/react';
+import { magicLinkClient } from 'better-auth/client/plugins';
 import { useMemo } from 'react';
 
 export const authClient = createAuthClient({
   // baseURL derived from BETTER_AUTH_URL or window.location.origin
+  plugins: [magicLinkClient()],
 });
 
 // Convenience exports
