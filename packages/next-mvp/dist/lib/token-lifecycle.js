@@ -243,6 +243,8 @@ async function ensureFreshToken(request) {
                             || (baSession.session?.expiresAt ? new Date(baSession.session.expiresAt).getTime() : Date.now() + 24 * 60 * 60 * 1000),
                         mfaVerified: true,
                         oauthProvider: 'google',
+                        idpClientId: idpTokens?.idpClientId ?? idpTokens?.clientId ?? baSession.idpClientId,
+                        merchantId: idpTokens?.merchantId ?? baSession.merchantId,
                     };
                 }
             }

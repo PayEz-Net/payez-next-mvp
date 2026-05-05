@@ -126,11 +126,14 @@ async function getBetterAuthSession(sessionToken, appSlug) {
                 userId: data.user.id || data.user.email,
                 email: data.user.email,
                 name: data.user.name,
+                image: data.user.image,
                 idpAccessToken: data.idpTokens?.idpAccessToken,
                 idpRefreshToken: data.idpTokens?.idpRefreshToken,
                 idpAccessTokenExpires: data.idpTokens?.idpAccessTokenExpires,
                 mfaVerified: data.idpTokens?.mfaVerified ?? false,
                 roles: data.idpTokens?.roles || [],
+                idpClientId: data.idpTokens?.idpClientId ?? data.idpTokens?.clientId ?? data.idpClientId,
+                merchantId: data.idpTokens?.merchantId ?? data.merchantId,
             };
         }
         return data;

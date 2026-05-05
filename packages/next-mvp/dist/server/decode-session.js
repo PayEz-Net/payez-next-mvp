@@ -116,6 +116,8 @@ async function tryBetterAuthSession(requestCookies) {
                 || (result.session.expiresAt ? new Date(result.session.expiresAt).getTime() : Date.now() + 24 * 60 * 60 * 1000),
             mfaVerified: idpTokens?.mfaVerified ?? false,
             oauthProvider: 'google',
+            idpClientId: idpTokens?.idpClientId ?? idpTokens?.clientId,
+            merchantId: idpTokens?.merchantId,
         };
         // Backwards compat: session.user.email works alongside session.email
         sessionData.user = {

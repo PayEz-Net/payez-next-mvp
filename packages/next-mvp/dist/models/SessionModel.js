@@ -29,6 +29,7 @@ class SessionModel {
     userId;
     email;
     name;
+    image;
     roles;
     // IDP Tokens
     idpAccessToken;
@@ -57,6 +58,7 @@ class SessionModel {
         this.userId = data.userId;
         this.email = data.email;
         this.name = data.name;
+        this.image = data.image;
         this.roles = data.roles || [];
         // IDP Tokens
         this.idpAccessToken = data.idpAccessToken;
@@ -111,6 +113,7 @@ class SessionModel {
             userId: this.userId,
             email: this.email,
             name: this.name,
+            image: this.image,
             roles: this.roles,
             idpAccessToken: this.idpAccessToken,
             idpRefreshToken: this.idpRefreshToken,

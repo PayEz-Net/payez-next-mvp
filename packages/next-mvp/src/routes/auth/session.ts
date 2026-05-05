@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
         id: session?.userId || authSession.user?.id,
         email: session?.email || authSession.user?.email,
         name: session?.name || authSession.user?.name,
-        image: authSession.user?.image || null,
+        image: authSession.user?.image || session?.image || null,
         // Redis session data
         roles: session?.roles || [],
         twoFactorSessionVerified: session?.mfaVerified || false,

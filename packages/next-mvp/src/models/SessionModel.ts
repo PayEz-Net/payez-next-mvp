@@ -38,6 +38,9 @@ export interface SessionData {
   /** Display name (from OAuth profile or IDP) */
   name?: string;
 
+  /** Avatar image URL (from OAuth profile) */
+  image?: string;
+
   /** User's roles/permissions */
   roles: string[];
 
@@ -141,6 +144,7 @@ export class SessionModel {
   userId: string;
   email: string;
   name?: string;
+  image?: string;
   roles: string[];
 
   // IDP Tokens
@@ -174,6 +178,7 @@ export class SessionModel {
     this.userId = data.userId;
     this.email = data.email;
     this.name = data.name;
+    this.image = data.image;
     this.roles = data.roles || [];
 
     // IDP Tokens
@@ -234,6 +239,7 @@ export class SessionModel {
       userId: this.userId,
       email: this.email,
       name: this.name,
+      image: this.image,
       roles: this.roles,
       idpAccessToken: this.idpAccessToken,
       idpRefreshToken: this.idpRefreshToken,

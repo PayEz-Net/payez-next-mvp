@@ -141,7 +141,7 @@ export declare function useVibeMutation<T extends VibeTableName, Op extends Muta
 /**
  * Convenience hook for creating records.
  */
-export declare function useVibeCreate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'create'>, never>): import("@tanstack/react-query").UseMutationResult<VibeTableType<T>, VibeError, Omit<VibeTableType<T>, "created_at" | "id" | "updated_at">, unknown>;
+export declare function useVibeCreate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'create'>, never>): import("@tanstack/react-query").UseMutationResult<VibeTableType<T>, VibeError, Omit<VibeTableType<T>, "id" | "created_at" | "updated_at">, unknown>;
 /**
  * Convenience hook for updating records.
  */

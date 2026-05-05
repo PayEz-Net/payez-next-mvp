@@ -26,6 +26,9 @@ export interface BetterAuthSocialProvider {
   clientId: string;
   clientSecret: string;
   scope?: string[];
+  prompt?: string;
+  accessType?: 'offline' | 'online';
+  hd?: string;
 }
 
 /**
@@ -39,10 +42,30 @@ export function buildBetterAuthProviders(
   for (const oauth of config.oauthProviders || []) {
     if (!oauth.enabled) continue;
     const name = oauth.provider.toLowerCase();
+    const additionalParams = oauth.additionalParams ?? {};
+    const rawPrompt = additionalParams.prompt;
+    const rawAccessType = additionalParams.accessType ?? additionalParams.access_type;
+    const rawHostedDomain = additionalParams.hd;
+
+    // Ensure profile scope is present for Google so avatar image is returned
+    const scopes = oauth.scopes?.split(' ') || [];
+    if (name === 'google' && !scopes.includes('profile')) {
+      scopes.push('profile');
+    }
+
     providers[name] = {
       clientId: oauth.clientId,
       clientSecret: oauth.clientSecret,
-      scope: oauth.scopes?.split(' '),
+      scope: scopes.length > 0 ? scopes : undefined,
+      // Google is overly eager to reuse the last account unless we
+      // explicitly ask for account selection on each social login.
+      prompt: typeof rawPrompt === 'string'
+        ? rawPrompt
+        : name === 'google'
+          ? 'select_account'
+          : undefined,
+      accessType: rawAccessType === 'online' ? 'online' : rawAccessType === 'offline' ? 'offline' : undefined,
+      hd: typeof rawHostedDomain === 'string' ? rawHostedDomain : undefined,
     };
   }
 
@@ -312,8 +335,11 @@ export async function exchangeOAuthForIdpTokens(
       userId: String(result.user?.user_id || result.user?.id || result.user_id || baUserId),
       email: result.user?.email || result.email || email,
       name: result.user?.full_name || result.user?.name || result.name || name,
+      image: image,
       roles: result.user?.roles || result.roles || [],
       mfaVerified: !requiresTwoFactor,
+      idpClientId: result.client_id ? String(result.client_id) : undefined,
+      merchantId: result.merchant_id ? String(result.merchant_id) : undefined,
     };
 
     // Store in BA Redis session (for decodeSession)

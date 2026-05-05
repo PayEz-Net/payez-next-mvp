@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.2] - 2026-05-05
+
+### Added
+- **`ensureFreshAccessToken(sessionToken, config)`** in `@payez/next-mvp/lib/ensure-fresh-access-token` — preflight-refreshes the IDP access token if it is within the safety window of expiry, single-flight via the existing Redis refresh lock. Encapsulates the lock-and-refresh dance previously only available inside `createRefreshHandler`, so proxy auth helpers can call it directly instead of letting the backend reject expired tokens with 401.
+- **`getFreshIdpToken(request, config)`** in `@payez/next-mvp/server/auth` — request-level convenience wrapper around `ensureFreshAccessToken`. Returns a token that is safe to forward to a downstream API without expecting a 401. Use in proxy routes; on failure, surface a 401/redirect to the user (no recoverable token).
+- **`getSessionData(request)`** and **`getIdpToken(request)`** in `@payez/next-mvp/server/auth` — centralized helpers for routes that read session shape or need the currently-issued bearer without performing token lifecycle work. (Originally drafted as 4.0.49; rolled into this release.)
+- **OAuth profile fields propagated end-to-end**: `image`, `idpClientId`, and `merchantId` now flow from Better Auth → Redis-backed `SessionData` → `getSessionData`/`getSession` consumers. Fixes avatars and tenant identity dropping at the session boundary.
+- **Google OAuth provider params** (`prompt`, `accessType`, `hd`) accepted via `BetterAuthSocialProvider`, with `profile` scope auto-injected for Google so avatar URLs are returned by the userinfo endpoint.
+
+### Fixed
+- Prefer normalized Redis-backed session data in `server/auth.getSession` before falling back to Better Auth session fields. Resolves a split where Redis-stored IDP tokens were not visible on the request session object.
+
+### Architecture note
+`getIdpToken(request)` is **fail-closed by design** — it returns whatever bearer is currently in the session even if it has expired. This is the right shape for routes that just want to inspect identity. For proxy routes that forward the bearer to a downstream API, **use `getFreshIdpToken`**. A good token-authority client never sends credentials it already knows are invalid; the new helper makes that the easy path.
+
 ## [4.1.1] - 2026-04-17
 
 ### Added

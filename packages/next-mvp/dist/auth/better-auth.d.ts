@@ -18,6 +18,9 @@ export interface BetterAuthSocialProvider {
     clientId: string;
     clientSecret: string;
     scope?: string[];
+    prompt?: string;
+    accessType?: 'offline' | 'online';
+    hd?: string;
 }
 /**
  * Build Better Auth social providers from IDP config.

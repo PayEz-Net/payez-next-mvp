@@ -26,6 +26,8 @@ export interface SessionData {
     email: string;
     /** Display name (from OAuth profile or IDP) */
     name?: string;
+    /** Avatar image URL (from OAuth profile) */
+    image?: string;
     /** User's roles/permissions */
     roles: string[];
     /** IDP access token (JWT) - used for API calls to PayEz services */
@@ -83,6 +85,7 @@ export declare class SessionModel {
     userId: string;
     email: string;
     name?: string;
+    image?: string;
     roles: string[];
     idpAccessToken?: string;
     idpRefreshToken?: string;
