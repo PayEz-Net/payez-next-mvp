@@ -54,8 +54,21 @@ async function GET(req) {
         }
         const token = baSession;
         const sessionToken = baSession.session?.token;
-        const session = sessionToken ? await (0, session_store_1.getSession)(sessionToken) : null;
-        // CRITICAL: Detect stale cookie state (JWT exists but Redis session missing)
+        // Try the canonical session-store first; fall back to the Better-Auth-keyed
+        // Redis record (`ba:{appSlug}:{token}`) when the canonical lookup misses.
+        // Without the fallback, any consumer that wrote a BA session via the OAuth
+        // callback path or dev-login and didn't separately populate the canonical
+        // store would land here with a "Stale session" verdict, even though the BA
+        // stack just resolved the cookie cleanly. Keeps the two viability impls
+        // (this route + `api-handlers/session/viability.ts`) in lockstep.
+        let session = sessionToken ? await (0, session_store_1.getSession)(sessionToken) : null;
+        if (sessionToken && !session) {
+            session = await (0, session_store_1.getBetterAuthSession)(sessionToken);
+            if (session) {
+                console.log('[VIABILITY] Found session in Better Auth store (fallback)');
+            }
+        }
+        // CRITICAL: Detect stale cookie state (cookie exists but neither store has the session)
         if (sessionToken && !session) {
             console.warn('[VIABILITY] Stale cookie detected - session not in Redis');
             return server_1.NextResponse.json({

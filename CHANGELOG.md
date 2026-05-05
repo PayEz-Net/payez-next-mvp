@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.3] - 2026-05-05
+
+### Fixed
+- **Viability route falls back to BA Redis when canonical session-store misses.** Two viability implementations had drifted: `api-handlers/session/viability.ts` already tried `getBetterAuthSession` after `getRedisSession`, but `routes/auth/viability.ts` (the one consumed via `export { GET } from '@payez/next-mvp/routes/auth/viability'`) only checked the canonical store. Any consumer that wrote a Better Auth session record without separately populating the canonical store — magic-link, OAuth callback before token exchange completes, dev-login impersonation flows — would get a `viable:false / Stale session` verdict and a forced redirect to login, even though `getBetterAuthSession` had just resolved the cookie cleanly. The routes/ version now mirrors the api-handlers/ version's two-step lookup.
+
 ## [4.1.2] - 2026-05-05
 
 ### Added
