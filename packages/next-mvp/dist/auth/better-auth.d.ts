@@ -56,7 +56,7 @@ export declare function createBetterAuthInstance(idpConfig: IDPClientConfig, opt
     };
     session: {
         cookieCache: {
-            enabled: true;
+            enabled: false;
             maxAge: number;
             refreshCache: false;
         };

@@ -30,7 +30,7 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
     };
     session: {
         cookieCache: {
-            enabled: true;
+            enabled: false;
             maxAge: number;
             refreshCache: false;
         };
@@ -154,9 +154,22 @@ export declare function getAuthInstance(): Promise<import("better-auth/types").A
 }>>;
 /**
  * Get the current session from a request.
- * Replaces getToken() and getServerSession().
  *
- * Returns the session object or null if not authenticated.
+ * Source-of-truth contract: **Redis is canonical for liveness.** Better Auth's
+ * cookie+cache layer is treated as a SESSION POINTER (it owns the signed-cookie
+ * secret and the canonical cookie parse) but does NOT decide whether a session
+ * is alive. If Better Auth's primary path returns null or a partial session
+ * (cookie cache miss, secondary storage eviction, token rotation), we fall
+ * back to manually extracting the session-token claim from the cookie and
+ * querying the canonical Redis store directly.
+ *
+ * This closes the asymmetric early-exit that caused contradictory answers
+ * within milliseconds in production traces:
+ *   GET /api/session/viability    → 200 (Redis: alive)
+ *   GET /api/session/idp-token    → 200 (Redis: alive)
+ *   getFreshIdpToken              → NO_SESSION (Better Auth cache miss)
+ *
+ * Returns the session object or null if not authenticated per Redis.
  */
 export declare function getSession(request?: Request): Promise<any>;
 /**

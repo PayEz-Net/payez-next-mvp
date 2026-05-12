@@ -145,8 +145,25 @@ export function createBetterAuthInstance(
     },
 
     session: {
+      // Cookie cache DISABLED — Redis is canonical for session liveness.
+      //
+      // Previously: enabled with maxAge 300 + refreshCache false. That cached
+      // a decoded session in process memory for 5 minutes, bypassing Redis
+      // reads during the window. Consequence: if the canonical app session
+      // at `{slug}:{token}` was evicted, refreshed, or rotated mid-window,
+      // Better Auth's in-memory copy stayed alive — and callers got
+      // contradictory answers depending on whether they consulted Better
+      // Auth (alive per cache) or Redis (dead/rotated). Documented contradiction
+      // visible in production traces: viability 200 + idp-token 200 +
+      // getFreshIdpToken NO_SESSION terminal within milliseconds.
+      //
+      // Trade-off: every Better Auth getSession() call now incurs one Redis
+      // read on the secondary-storage path. Latency cost is acceptable
+      // (sub-ms in-region) and the alternative is duplicate Layer-1
+      // workarounds in every consumer app — already shipped in idealvibe.online
+      // at b6a91f6.
       cookieCache: {
-        enabled: true,
+        enabled: false,
         maxAge: 300,
         refreshCache: false,
       },

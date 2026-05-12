@@ -49,6 +49,7 @@ require("server-only");
 const better_auth_1 = require("../auth/better-auth");
 const idp_client_config_1 = require("../lib/idp-client-config");
 const session_store_1 = require("../lib/session-store");
+const app_slug_1 = require("../lib/app-slug");
 let authInstance = null;
 let authInitPromise = null;
 function buildSessionDataFromAuthSession(session) {
@@ -117,39 +118,145 @@ async function getAuthInstance() {
     return authInitPromise;
 }
 /**
+ * JWT body-decode helper — base64-decode only, NO signature verification.
+ * Safe because the value is then used as a Redis lookup key: Redis is the
+ * liveness gate, so an attacker forging a JWT body with a guessed
+ * sessionToken claim still has to land on a real Redis session (infeasible
+ * against high-entropy UUIDs). Used by the canonical-fallback path in
+ * `getSession` to extract the session token when Better Auth's primary
+ * path returns null (cookie cache miss / secondary storage eviction).
+ */
+function decodeJwtBody(jwt) {
+    try {
+        const parts = jwt.split('.');
+        if (parts.length !== 3)
+            return null;
+        const decoded = Buffer.from(parts[1], 'base64').toString('utf-8');
+        return JSON.parse(decoded);
+    }
+    catch {
+        return null;
+    }
+}
+/** Extract the session-token claim from the Better Auth session cookie
+ *  WITHOUT going through Better Auth's `auth.api.getSession()`. Handles
+ *  both single-cookie and chunked-cookie cases (Better Auth chunks long
+ *  JWTs across `{name}.0`, `{name}.1`, …). Returns the raw `sessionToken`
+ *  claim suitable for use as a Redis key. Returns null if no cookie is
+ *  present or the JWT can't be parsed. */
+function extractSessionTokenFromCookie(request) {
+    const cookieHeader = request.headers.get('cookie');
+    if (!cookieHeader)
+        return null;
+    const cookieName = (0, app_slug_1.getSessionCookieName)();
+    let rawJwt = null;
+    // Direct cookie first.
+    const chunks = [];
+    for (const part of cookieHeader.split(';')) {
+        const trimmed = part.trim();
+        const eq = trimmed.indexOf('=');
+        if (eq === -1)
+            continue;
+        const k = trimmed.slice(0, eq);
+        const v = trimmed.slice(eq + 1);
+        if (k === cookieName) {
+            rawJwt = decodeURIComponent(v);
+            break;
+        }
+        if (k.startsWith(`${cookieName}.`)) {
+            const idx = parseInt(k.split('.').pop() || '0', 10);
+            if (Number.isFinite(idx))
+                chunks.push({ idx, value: decodeURIComponent(v) });
+        }
+    }
+    // Chunked cookies fallback (Better Auth splits long JWTs across .0/.1/.2 …).
+    if (!rawJwt && chunks.length > 0) {
+        chunks.sort((a, b) => a.idx - b.idx);
+        rawJwt = chunks.map(c => c.value).join('');
+    }
+    if (!rawJwt)
+        return null;
+    const decoded = decodeJwtBody(rawJwt);
+    if (decoded && typeof decoded === 'object' && typeof decoded.sessionToken === 'string') {
+        return decoded.sessionToken;
+    }
+    return null;
+}
+/**
  * Get the current session from a request.
- * Replaces getToken() and getServerSession().
  *
- * Returns the session object or null if not authenticated.
+ * Source-of-truth contract: **Redis is canonical for liveness.** Better Auth's
+ * cookie+cache layer is treated as a SESSION POINTER (it owns the signed-cookie
+ * secret and the canonical cookie parse) but does NOT decide whether a session
+ * is alive. If Better Auth's primary path returns null or a partial session
+ * (cookie cache miss, secondary storage eviction, token rotation), we fall
+ * back to manually extracting the session-token claim from the cookie and
+ * querying the canonical Redis store directly.
+ *
+ * This closes the asymmetric early-exit that caused contradictory answers
+ * within milliseconds in production traces:
+ *   GET /api/session/viability    → 200 (Redis: alive)
+ *   GET /api/session/idp-token    → 200 (Redis: alive)
+ *   getFreshIdpToken              → NO_SESSION (Better Auth cache miss)
+ *
+ * Returns the session object or null if not authenticated per Redis.
  */
 async function getSession(request) {
     const auth = await getAuthInstance();
     if (!request)
         return null;
+    // Path A — Better Auth primary path (cookie cache → secondary storage).
+    // Fast happy-path when both Better Auth and Redis agree.
+    let betterAuthSession = null;
     try {
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session?.session?.token || !session?.user)
-            return session;
-        const sessionToken = session.session.token;
+        betterAuthSession = await auth.api.getSession({ headers: request.headers });
+    }
+    catch { /* fall through to canonical Redis path */ }
+    if (betterAuthSession?.session?.token && betterAuthSession?.user) {
+        const sessionToken = betterAuthSession.session.token;
         let sessionData = null;
-        // Prefer the app's normalized Redis session. Fall back to Better Auth's
-        // secondary storage record, then finally to whatever Better Auth already
-        // put on the request session object.
         try {
             sessionData = await (0, session_store_1.getSession)(sessionToken);
-            if (!sessionData) {
+            if (!sessionData)
                 sessionData = await (0, session_store_1.getBetterAuthSession)(sessionToken);
-            }
         }
         catch { /* Redis unavailable */ }
-        if (!sessionData) {
-            sessionData = buildSessionDataFromAuthSession(session);
-        }
-        return attachSessionData(session, sessionData, sessionToken);
+        if (!sessionData)
+            sessionData = buildSessionDataFromAuthSession(betterAuthSession);
+        return attachSessionData(betterAuthSession, sessionData, sessionToken);
     }
-    catch {
+    // Path B — Better Auth said null/incomplete. Fall back to manual cookie
+    // decode + Redis-canonical liveness check. This catches cases where the
+    // canonical app session at `{slug}:{token}` is still alive but Better
+    // Auth's `ba:{slug}:{token}` secondary record was evicted or the
+    // in-memory cookie cache returned stale-null. No JWT signature check —
+    // Redis lookup is the validation: an attacker forging a session-token
+    // claim hits NO_SESSION because Redis has no matching entry.
+    const sessionToken = extractSessionTokenFromCookie(request);
+    if (!sessionToken)
         return null;
+    let sessionData = null;
+    try {
+        sessionData = await (0, session_store_1.getSession)(sessionToken);
+        if (!sessionData)
+            sessionData = await (0, session_store_1.getBetterAuthSession)(sessionToken);
     }
+    catch { /* Redis unavailable */ }
+    if (!sessionData)
+        return null;
+    // Synthesize a minimal session shape compatible with downstream callers.
+    // The `session.token` field is what `getFreshIdpToken` and other callers
+    // read to drive `ensureFreshAccessToken` + Redis lookups, so it MUST be
+    // populated here even though Better Auth didn't give us a full session.
+    const synthetic = {
+        session: { token: sessionToken },
+        user: {
+            id: sessionData.userId,
+            email: sessionData.email,
+            roles: sessionData.roles,
+        },
+    };
+    return attachSessionData(synthetic, sessionData, sessionToken);
 }
 /**
  * Get normalized session data for the current request.
