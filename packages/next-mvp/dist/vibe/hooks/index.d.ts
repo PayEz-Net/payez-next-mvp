@@ -58,7 +58,7 @@ export interface UseVibeQueryOptions<T extends VibeTableName> extends Omit<UseQu
  * })
  * ```
  */
-export declare function useVibeQuery<T extends VibeTableName>(table: T, options?: FindManyOptions<VibeTableType<T>>, queryOptions?: UseVibeQueryOptions<T>): import("@tanstack/react-query").UseQueryResult<FindManyResult<VibeTableType<T>>, VibeError>;
+export declare function useVibeQuery<T extends VibeTableName>(table: T, options?: FindManyOptions<VibeTableType<T>>, queryOptions?: UseVibeQueryOptions<T>): any;
 export interface UseVibeDetailOptions<T extends VibeTableName> extends Omit<UseQueryOptions<VibeTableType<T> | null, VibeError>, 'queryKey' | 'queryFn'> {
     /** Vibe client config (optional - uses default if not provided) */
     config?: VibeClientConfig;
@@ -75,7 +75,7 @@ export interface UseVibeDetailOptions<T extends VibeTableName> extends Omit<UseQ
  * const { data: user, isLoading } = useVibeDetail('users', 123)
  * ```
  */
-export declare function useVibeDetail<T extends VibeTableName>(table: T, id: number | null | undefined, queryOptions?: UseVibeDetailOptions<T>): import("@tanstack/react-query").UseQueryResult<import("@tanstack/react-query").NoInfer<VibeTableType<T> | null>, VibeError>;
+export declare function useVibeDetail<T extends VibeTableName>(table: T, id: number | null | undefined, queryOptions?: UseVibeDetailOptions<T>): any;
 export interface UseVibeCountOptions<T extends VibeTableName> extends Omit<UseQueryOptions<number, VibeError>, 'queryKey' | 'queryFn'> {
     /** Vibe client config (optional - uses default if not provided) */
     config?: VibeClientConfig;
@@ -94,7 +94,7 @@ export interface UseVibeCountOptions<T extends VibeTableName> extends Omit<UseQu
  */
 export declare function useVibeCount<T extends VibeTableName>(table: T, options?: {
     where?: FindManyOptions<VibeTableType<T>>['where'];
-}, queryOptions?: UseVibeCountOptions<T>): import("@tanstack/react-query").UseQueryResult<number, VibeError>;
+}, queryOptions?: UseVibeCountOptions<T>): any;
 type MutationOperation = 'create' | 'update' | 'delete';
 type MutationInput<T extends VibeTableName, Op extends MutationOperation> = Op extends 'create' ? CreateOptions<VibeTableType<T>>['data'] : Op extends 'update' ? UpdateOptions<VibeTableType<T>> : Op extends 'delete' ? {
     id: number;
@@ -137,21 +137,19 @@ export interface UseVibeMutationOptions<T extends VibeTableName, Op extends Muta
  * await deleteUser.mutateAsync({ id: 123 })
  * ```
  */
-export declare function useVibeMutation<T extends VibeTableName, Op extends MutationOperation>(table: T, operation: Op, mutationOptions?: UseVibeMutationOptions<T, Op>): import("@tanstack/react-query").UseMutationResult<MutationResult<T, Op>, VibeError, MutationInput<T, Op>, unknown>;
+export declare function useVibeMutation<T extends VibeTableName, Op extends MutationOperation>(table: T, operation: Op, mutationOptions?: UseVibeMutationOptions<T, Op>): any;
 /**
  * Convenience hook for creating records.
  */
-export declare function useVibeCreate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'create'>, never>): import("@tanstack/react-query").UseMutationResult<VibeTableType<T>, VibeError, Omit<VibeTableType<T>, "id" | "created_at" | "updated_at">, unknown>;
+export declare function useVibeCreate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'create'>, never>): any;
 /**
  * Convenience hook for updating records.
  */
-export declare function useVibeUpdate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'update'>, never>): import("@tanstack/react-query").UseMutationResult<VibeTableType<T>, VibeError, UpdateOptions<VibeTableType<T>>, unknown>;
+export declare function useVibeUpdate<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'update'>, never>): any;
 /**
  * Convenience hook for deleting records.
  */
-export declare function useVibeDelete<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'delete'>, never>): import("@tanstack/react-query").UseMutationResult<VibeTableType<T>, VibeError, {
-    id: number;
-}, unknown>;
+export declare function useVibeDelete<T extends VibeTableName>(table: T, options?: Omit<UseVibeMutationOptions<T, 'delete'>, never>): any;
 /**
  * Prefetch Vibe data for SSR/SSG.
  *

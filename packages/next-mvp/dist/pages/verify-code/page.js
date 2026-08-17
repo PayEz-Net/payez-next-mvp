@@ -42,6 +42,17 @@ const useTheme_1 = require("../../theme/useTheme");
  * Prevents auto-redirect back to dashboard when session refreshes in background.
  */
 const VERIFY_IN_PROGRESS_KEY = 'idealvibe_2fa_verify_in_progress';
+async function checkSessionLiveness() {
+    const res = await fetch('/api/auth/get-session', { credentials: 'include' }).catch(() => null);
+    if (!res)
+        return 'unknown'; // network error / timeout - inconclusive, not proof of death
+    if (!res.ok)
+        return 'unknown'; // 5xx, 429, etc. - inconclusive, not proof of death
+    const body = await res.json().catch(() => null);
+    if (body === null)
+        return 'unknown'; // malformed 200 body - inconclusive
+    return (body.session || body.user) ? 'alive' : 'dead';
+}
 function VerifyCodeForm() {
     const router = (0, navigation_1.useRouter)();
     const searchParams = (0, navigation_1.useSearchParams)();
@@ -162,20 +173,33 @@ function VerifyCodeForm() {
                 const res = await fetch('/api/session/viability', {
                     credentials: 'include',
                 });
-                if (res.status === 401) {
-                    const data = await res.json().catch(() => ({}));
-                    // Session is no longer valid - warn user and redirect
-                    if (data.valid === false || data.mfaExpired === true) {
-                        setError('Your session has expired. Redirecting to login...');
-                        setTimeout(async () => {
-                            await (0, react_2.signOut)({ redirect: false });
-                            if (typeof window !== 'undefined') {
-                                sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
-                            }
-                            router.push(`/account-auth/login?error=SessionExpired`);
-                        }, 2000);
+                // 184998: this watchdog was dead by two independent faults - it gated
+                // on res.status === 401 (viability never returns 401; every real
+                // answer is 200) and then read data.valid/data.mfaExpired, which the
+                // endpoint has never emitted. The real shape is viable /
+                // accessTokenExpired / reason.
+                const data = await res.json().catch(() => null);
+                if (!data)
+                    return; // unparseable body (e.g. a 500 page) - inconclusive, next tick retries
+                // 183483's rule: a single non-authoritative signal may never end a
+                // session on its own. viable:false is not proof of death - the route
+                // returns it for a Redis-store-miss stale-cookie read (170033's exact
+                // failure mode) with a LIVE session. Treat it as a prompt to check,
+                // and defer to checkSessionLiveness() as the sole authority: only
+                // 'dead' proceeds; 'unknown' is held exactly like 'alive'.
+                const looksExpired = data.viable === false || data.accessTokenExpired === true;
+                if (!looksExpired)
+                    return;
+                if (await checkSessionLiveness() !== 'dead')
+                    return;
+                setError('Your session has expired. Redirecting to login...');
+                setTimeout(async () => {
+                    await (0, react_2.signOut)({ redirect: false });
+                    if (typeof window !== 'undefined') {
+                        sessionStorage.removeItem(VERIFY_IN_PROGRESS_KEY);
                     }
-                }
+                    router.push(`/account-auth/login?error=SessionExpired`);
+                }, 2000);
             }
             catch (err) {
                 // Silent fail - let the next actual API call handle the error

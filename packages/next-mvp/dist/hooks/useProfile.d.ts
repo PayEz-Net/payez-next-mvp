@@ -12,4 +12,4 @@ export type ProfileResponse = {
     contact_information?: Record<string, any>;
     [key: string]: any;
 };
-export declare function useProfile(): import("@tanstack/react-query").UseQueryResult<ProfileResponse, Error>;
+export declare function useProfile(): any;
